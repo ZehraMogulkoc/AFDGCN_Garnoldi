@@ -1517,11 +1517,12 @@ class GArnoldi_prop(MessagePassing):
             
             # coe = coe2.clone()
            
-            edge_index, norm = gcn_norm(edge_index, edge_weight, num_nodes=x.size(0), dtype=x.dtype)
-    
+            #edge_index, norm = gcn_norm(edge_index, edge_weight, num_nodes=x.size(0), dtype=x.dtype)
+            edge_index, norm = gcn_norm(edge_index, num_nodes=x.size(1), dtype=x.dtype)
             #L=I-D^(-0.5)AD^(-0.5)
-            edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='sym', dtype=x.dtype, num_nodes=x.size(self.node_dim))
-    
+           # edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='sym', dtype=x.dtype, num_nodes=x.size(self.node_dim))
+            edge_index1, norm1 = get_laplacian(edge_index, normalization='sym',
+                                           num_nodes=x.size(1))
             #L_tilde=L-I
             edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
     
