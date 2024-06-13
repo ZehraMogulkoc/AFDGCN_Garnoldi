@@ -1582,6 +1582,10 @@ class GARNOLDI(torch.nn.Module):
         self.FuncName = args.FuncName
         self.num_layers = num_layers
 ###
+        self.dcrnnn_cells = nn.ModuleList()
+        self.dcrnnn_cells.append(AGCRNCell(num_node, input_dim, output_dim, cheb_k, embed_dim))
+        for _ in range(1, num_layers):
+            self.dcrnnn_cells.append(AGCRNCell(num_node, input_dim, output_dim, cheb_k, embed_dim))
     def reset_parameters(self):
         self.prop1.reset_parameters()
 
