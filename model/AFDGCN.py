@@ -999,7 +999,7 @@ class GraphAttentionLayer(nn.Module):
         e = self.leakyrelu(e)
 
         zero_vec = -9e15 * torch.ones_like(e)
-        attention = torch.where(self.adj > 0, e, zero_vec)
+        attention = torch.where(self.adj.to('cuda:0') > 0, e, zero_vec)
         attention = F.softmax(attention, dim=1)
         attention = F.dropout(attention, self.dropout, training=self.training)
         out = torch.matmul(attention, Wh)
