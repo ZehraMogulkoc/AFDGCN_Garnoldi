@@ -20,7 +20,7 @@ from torch_geometric.typing import Adj, OptPairTensor, OptTensor, SparseTensor
 from torch_geometric.utils import is_torch_sparse_tensor, spmm, to_edge_index
 from torch_geometric.utils.sparse import set_sparse_value
 import sys
-sys.path.append('/content/AFDGCN_Garnoldi/')  # Append the parent directory
+#sys.path.append('/content/AFDGCN_Garnoldi/')  # Append the parent directory
 #from arnoldi import *
 # -*- coding: utf-8 -*-
 # -*- coding: utf-8 -*-
