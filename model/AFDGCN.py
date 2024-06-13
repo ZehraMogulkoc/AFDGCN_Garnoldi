@@ -1525,7 +1525,7 @@ class GArnoldi_prop(MessagePassing):
                                            num_nodes=x.size(1))
             #L_tilde=L-I
             edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
-    
+            x = x.T
             Tx_0=x
             if (self.homophily):
                 Tx_1=self.propagate(edge_index,x=x,norm=norm,size=None)
