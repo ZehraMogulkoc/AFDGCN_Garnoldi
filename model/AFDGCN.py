@@ -1530,8 +1530,7 @@ class GArnoldi_prop(MessagePassing):
             if (self.homophily):
                 Tx_1=self.propagate(edge_index,x=x,norm=norm,size=None)
             else:
-                Tx_1=self.propagate(edge_index1,x=x,norm=norm1,size=None)
-    
+                Tx_1=self.propagate(edge_index1,x=x,norm=norm1)
             out=coe[0]*Tx_0+coe[1]*Tx_1
     
             for i in range(2,self.K-1):
