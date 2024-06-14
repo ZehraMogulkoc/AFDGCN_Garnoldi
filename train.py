@@ -252,8 +252,8 @@ trainer = Engine(model,
                  args,
                  lr_scheduler)
 
-#functionnames = ['g_band_rejection', 'g_band_pass', 'g_low_pass', 'g_high_pass']
-functionnames = ['g_0', 'g_1', 'g_2', 'g_3']
+functionnames = ['g_band_rejection', 'g_band_pass', 'g_low_pass', 'g_high_pass']
+#functionnames = ['g_0', 'g_1', 'g_2', 'g_3']
 polynames = ['Monomial', 'Chebyshev', 'Legendre', 'Jacobi']
 # polynames = ['Chebyshev']
 # functionnames = ['g_low_pass']
