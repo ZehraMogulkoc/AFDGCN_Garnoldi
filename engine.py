@@ -37,7 +37,7 @@ class Engine(object):
         self.logger = get_logger(args.log_dir, name=args.model, debug=args.debug)
         self.logger.info('Experiment log path in: {}'.format(args.log_dir))
          # Create a SummaryWriter for TensorBoard
-        self.writer = SummaryWriter(log_dir="/content/AFDGCN_Garnoldi/logs_yeni")
+        self.writer = SummaryWriter(log_dir="/content/AFDGCN_Garnoldi/logs_garnoldi_all")
 
     
     def train_epoch(self,Net):
