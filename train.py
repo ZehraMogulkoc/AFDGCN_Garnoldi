@@ -260,7 +260,8 @@ polynames = ['Monomial', 'Chebyshev', 'Legendre', 'Jacobi']
 
 methodnames = ['GARNOLDI']
 # methodnames = ['GCN', 'GAT', 'APPNP','ChebNet', 'JKNet','GPRGNN','BernNet']
-LR = [0.002]
+LR = [0.002] 
+#0.009
 MYdropout = [0.5]
 if args.mode == 'train':
 
