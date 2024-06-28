@@ -260,9 +260,10 @@ polynames = ['Monomial', 'Chebyshev', 'Legendre', 'Jacobi']
 
 methodnames = ['GARNOLDI']
 # methodnames = ['GCN', 'GAT', 'APPNP','ChebNet', 'JKNet','GPRGNN','BernNet']
-LR = [0.002] 
+LR = [0.01] 
+#,0.05,0.001
 #0.009
-MYdropout = [0.5]
+MYdropout = [0.1,0.3,0.9]
 if args.mode == 'train':
 
     # sys.stdout = open('PubmedHyperOPTComplexes-L.txt', 'w')
