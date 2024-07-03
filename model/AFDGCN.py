@@ -1571,8 +1571,8 @@ class GArnoldi_prop(MessagePassing):
 class GARNOLDI(torch.nn.Module):
     def __init__(self, num_node, input_dim, output_dim, hidden, cheb_k, num_layers, embed_dim):
         super(GARNOLDI, self).__init__()
-        self.lin1 = Linear(384, 5).to(torch.device('cuda:0'))
-        self.lin2 = Linear(5, 384).to(torch.device('cuda:0'))
+        self.lin1 = Linear(384, 64).to(torch.device('cuda:0'))
+        self.lin2 = Linear(64, 384).to(torch.device('cuda:0'))
         self.prop1 = GArnoldi_prop(11, 0.1, args.ArnoldiInit, args.FuncName, False,
                                        False,0.000001, 2.0000,True, None).to(torch.device('cuda:0'))
 
@@ -1608,7 +1608,7 @@ class GARNOLDI(torch.nn.Module):
             x = x.transpose(0, 1)
 
             # Reshape it from (5, 1216) to (5, 1, 19, 64)
-            x = x.reshape(x.size(0), 12, 8, 5).to(torch.device('cuda:0'))  # Manually reshape to (5, 1, 19, 64)
+            x = x.reshape(x.size(0), 12, 8, 64).to(torch.device('cuda:0'))  # Manually reshape to (5, 1, 19, 64)
 
             # Apply log softmax along the appropriate dimension
             x = F.log_softmax(x, dim=3)
@@ -1636,7 +1636,7 @@ class GARNOLDI(torch.nn.Module):
 ####################################################################
 def read_edge_list_csv():
     # Read the CSV file into a DataFrame
-    df = pd.read_csv('/content/AFDGCN_Garnoldi/data/PEMS04/PEMS04.csv')
+    df = pd.read_csv('/content/AFDGCN_Garnoldi/data/Konya/konya_kavşaklar.csv')
 
     # Extract the 'from' and 'to' columns as numpy arrays
     edges_from = df['from'].to_numpy()
