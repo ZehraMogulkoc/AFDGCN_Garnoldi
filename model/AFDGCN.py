@@ -1067,8 +1067,8 @@ class GPR_prop(MessagePassing):
 class GPRGNN(torch.nn.Module):
     def __init__(self, num_node, input_dim, output_dim, hidden, cheb_k, num_layers, embed_dim):
         super(GPRGNN, self).__init__()
-        self.lin1 = Linear(1216, 1)  # (input_dim, hidden) 19, 1
-        self.lin2 = Linear(1, 1216)
+        self.lin1 = Linear(512, 64)  # (input_dim, hidden) 19, 1
+        self.lin2 = Linear(64, 512)
 
         self.prop1 = GPR_prop(cheb_k, 0.5, 'PPR', None)
 
@@ -1105,7 +1105,7 @@ class GPRGNN(torch.nn.Module):
             x = x.transpose(0, 1)
 
             # Reshape it from (5, 1216) to (5, 1, 19, 64)
-            x = x.view(x.size(0), 1, 19, 64)  # Manually reshape to (5, 1, 19, 64)
+            x = x.view(x.size(0), 1, 8, 64)  # Manually reshape to (5, 1, 19, 64)
 
             # Apply log softmax along the appropriate dimension
             x = F.log_softmax(x, dim=3)  # Assuming the last dimension (64) is the one to apply softmax to
@@ -1229,8 +1229,8 @@ class APPNP(MessagePassing):
 class APPNP_Net(torch.nn.Module):
     def __init__(self, num_node, input_dim, output_dim, hidden, cheb_k, num_layers, embed_dim):
         super(APPNP_Net, self).__init__()
-        self.lin1 = Linear(1216, 1)
-        self.lin2 = Linear(1, 1216)
+        self.lin1 = Linear(512, 64)
+        self.lin2 = Linear(64, 512)
         self.prop1 = APPNP(cheb_k, 0.5, 0.2, False, True, True)
         self.dropout = 0.2
         self.num_layers = num_layers
@@ -1269,7 +1269,7 @@ class APPNP_Net(torch.nn.Module):
         # print("After propagation, x size:", x.size())
         x = x.transpose(0, 1)
         # Reshape it from (5, 1216) to (5, 1, 19, 64)
-        x = x.reshape(x.size(0), 1, 19, 64)  # Manually reshape to (5, 1, 19, 64)
+        x = x.reshape(x.size(0), 1, 8, 64)  # Manually reshape to (5, 1, 19, 64)
         # print("After reshaping, x size:", x.size())
 
         # Apply log softmax along the appropriate dimension
@@ -1636,7 +1636,7 @@ class GARNOLDI(torch.nn.Module):
 ####################################################################
 def read_edge_list_csv():
     # Read the CSV file into a DataFrame
-    df = pd.read_csv('/content/AFDGCN_Garnoldi/data/Konya/konya_kavşaklar.csv')
+    df = pd.read_csv('./data/Konya/konya_kavşaklar.csv')
 
     # Extract the 'from' and 'to' columns as numpy arrays
     edges_from = df['from'].to_numpy()
