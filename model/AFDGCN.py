@@ -1,34 +1,16 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Jun 30 12:36:50 2024
+
+@author: Administrator
+"""
+
 import torch
 import math
-from config import args
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from torch_geometric.nn import MessagePassing
-from torch_geometric.nn import GCNConv, APPNP
-from torch.nn import Linear, Parameter
-from torch_geometric.nn.conv.gcn_conv import gcn_norm
-import pandas as pd
-from typing import Optional
 
-import torch.nn.functional as F
-from torch import Tensor
-from torch_geometric.utils import add_self_loops, get_laplacian
-from torch_geometric.nn.conv import MessagePassing
-from torch_geometric.nn.conv.gcn_conv import gcn_norm
-from torch_geometric.typing import Adj, OptPairTensor, OptTensor, SparseTensor
-from torch_geometric.utils import is_torch_sparse_tensor, spmm, to_edge_index
-from torch_geometric.utils.sparse import set_sparse_value
-import sys
-#sys.path.append('/content/AFDGCN_Garnoldi/')  # Append the parent directory
-#from arnoldi import *
-# -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Feb  8 23:05:11 2024
-
-@author: musta
-"""
 
 from typing import Optional, Tuple
 import math
@@ -720,40 +702,170 @@ class ARNOLDI(MessagePassing):
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(K={self.K}, alpha={self.alpha})'
 
+
+
+
+def generateCoeff( K, Init, nameFunc, homophily, Vandermonde, lower, upper, Threeterm):
+
+    assert Init in ['Monomial', 'Chebyshev', 'Legendre', 'Jacobi', 'PPR','SChebyshev']
+    if Init == 'Monomial':
+        # SGC-like, note that in this case, alpha has to be a integer. It means where the peak at when initializing GPR weights.
+        #x = m_polynomial_zeros(-(self.alpha), (self.alpha), self.K)
+        if(nameFunc == 'g_0'):
+            coeffs =  compare_fit_panelA(g_0, Init, Vandermonde, Threeterm,K, lower, upper) # m_polynomial_zeros(-(self.alpha), (self.alpha), self.K)
+        elif(nameFunc == 'g_1'):
+            coeffs =  compare_fit_panelA(g_1, Init, Vandermonde, Threeterm, K, lower, upper) 
+        elif(nameFunc == 'g_2'):
+            coeffs =  compare_fit_panelA(g_2,Init,Vandermonde, Threeterm, K,lower, upper)
+        elif(nameFunc == 'g_3'):
+            coeffs =  compare_fit_panelA(g_3,Init,Vandermonde, Threeterm, K,lower, upper)
+        elif(nameFunc == 'g_4'):
+            coeffs = compare_fit_panelA(g_4,Init,Vandermonde,Threeterm, K,lower, upper)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)#
+        elif(nameFunc == 'g_band_rejection'):
+            coeffs = compare_fit_panelA(g_band_rejection,Init,Vandermonde,Threeterm, K,lower, upper)
+        elif(nameFunc == 'g_band_pass'):
+            coeffs = compare_fit_panelA(g_band_pass,Init,Vandermonde,Threeterm, K,lower, upper)
+        elif(nameFunc == 'g_low_pass'):
+            coeffs = compare_fit_panelA(g_low_pass,Init,Vandermonde,Threeterm, K,lower, upper)
+        elif(nameFunc == 'g_high_pass'):
+            coeffs = compare_fit_panelA(g_high_pass,Init,Vandermonde,Threeterm, K,lower, upper)
+        elif(nameFunc == 'g_comb'):
+           coeffs = compare_fit_panelA(g_comb,Init,Vandermonde,Threeterm, K,lower, upper)
+        else:
+            coeffs = compare_fit_panelA(g_fullRWR,Init,Vandermonde,Threeterm,K,lower, upper)
+        #l = [i for i in range (1, len(coeffs)+1) ]
+        coeffs = filter_jackson(coeffs)
+        TEMP = coeffs
+        
+        # TEMP = p_polynomial_zeros(self.K)
+        # TEMP = j_polynomial_zeros(self.K,0,1)
+    elif Init == 'Chebyshev':
+        # PPR-like
+        if(nameFunc == 'g_0'):
+            coeffs = compare_fit_panelA(g_0, Init, Vandermonde,Threeterm, K,lower, upper)
+        elif(nameFunc == 'g_1'):
+            coeffs = compare_fit_panelA(g_1, Init, Vandermonde,Threeterm, K,lower, upper) 
+        elif(nameFunc == 'g_2'):
+            coeffs = compare_fit_panelA(g_2,Init,Vandermonde,Threeterm, K,lower, upper)
+        elif(nameFunc == 'g_3'):
+            coeffs = compare_fit_panelA(g_3,Init,Vandermonde,Threeterm, K,lower, upper)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)#
+        elif(nameFunc == 'g_4'):
+            coeffs = compare_fit_panelA(g_4,Init,Vandermonde,Threeterm, K,lower, upper)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)#
+        elif(nameFunc == 'g_band_rejection'):
+            coeffs = compare_fit_panelA(g_band_rejection,Init,Vandermonde,Threeterm, K,lower, upper)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)#
+        elif(nameFunc == 'g_band_pass'):
+            coeffs = compare_fit_panelA(g_band_pass,Init,Vandermonde,Threeterm, K,lower, upper)
+        elif(nameFunc == 'g_low_pass'):
+            coeffs = compare_fit_panelA(g_low_pass,Init,Vandermonde,Threeterm, K,lower, upper)
+        elif(nameFunc == 'g_high_pass'):
+            coeffs = compare_fit_panelA(g_high_pass,Init,Vandermonde,Threeterm,K,lower, upper)
+        elif(nameFunc == 'g_comb'):
+            coeffs = compare_fit_panelA(g_comb,Init,Vandermonde,Threeterm,K,lower, upper)
+        else:
+            coeffs = compare_fit_panelA(g_fullRWR,Init, Vandermonde,K)
+        coeffs = filter_jackson(coeffs)
+        
+        
+        TEMP = coeffs
+        #TEMP = t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)
+    elif Init == 'Legendre':
+        #TEMP = p_polynomial_zeros(self.K)
+        if(nameFunc == 'g_0'):
+            coeffs = compare_fit_panelA(g_0, Init, Vandermonde, Threeterm,K,lower, upper)#p_polynomial_zeros(self.K) 
+        elif(nameFunc == 'g_1'):
+            coeffs = compare_fit_panelA(g_1, Init, Vandermonde,Threeterm,K,lower, upper) #p_polynomial_zeros(self.K)
+        elif(nameFunc == 'g_2'):
+            coeffs = compare_fit_panelA(g_2,Init,Vandermonde, Threeterm,K,lower, upper)
+        elif(nameFunc == 'g_3'):
+            coeffs = compare_fit_panelA(g_3,Init,Vandermonde, Threeterm,K,lower, upper)#p_polynomial_zeros(K)
+        elif(nameFunc == 'g_4'):
+            coeffs = compare_fit_panelA(g_4,Init,Vandermonde,Threeterm,K,lower, upper)#t_polynomial_zeros(-(alpha), (alpha), K)#
+        elif(nameFunc == 'g_band_rejection'):
+            coeffs = compare_fit_panelA(g_band_rejection,Init,Vandermonde,Threeterm,K,lower, upper)#t_polynomial_zeros(-(alpha), (alpha), K)#
+        elif(nameFunc == 'g_band_pass'):
+            coeffs = compare_fit_panelA(g_band_pass,Init,Vandermonde,Threeterm,K,lower, upper)
+        elif(nameFunc == 'g_low_pass'):
+            coeffs = compare_fit_panelA(g_low_pass,Init,Vandermonde,Threeterm,K,lower, upper)
+        elif(nameFunc == 'g_high_pass'):
+            coeffs = compare_fit_panelA(g_high_pass,Init,Vandermonde,Threeterm,K,lower, upper)
+        elif(nameFunc == 'g_comb'):
+            coeffs = compare_fit_panelA(g_comb,Init,Vandermonde,Threeterm,K,lower, upper)
+        else:
+            coeffs = compare_fit_panelA(g_fullRWR,Init,K,lower, upper)
+        
+        coeffs = filter_jackson(coeffs)
+        #coeffs = np.divide(coeffs, l)
+        #coeffs = np.divide(coeffs, division)
+        
+        TEMP = coeffs
+    elif Init == 'Jacobi':
+        if(nameFunc == 'g_0'):
+            coeffs = compare_fit_panelA(g_0, Init, Vandermonde, Threeterm,K,lower, upper)#p_polynomial_zeros(K) 
+        elif(nameFunc == 'g_1'):
+            coeffs = compare_fit_panelA(g_1, Init, Vandermonde,Threeterm,K,lower, upper) #p_polynomial_zeros(K)
+        elif(nameFunc == 'g_2'):
+            coeffs = compare_fit_panelA(g_2,Init,Vandermonde, Threeterm,K,lower, upper)
+        elif(nameFunc == 'g_3'):
+            coeffs = compare_fit_panelA(g_3,Init,Vandermonde, Threeterm,K,lower, upper)#p_polynomial_zeros(K)
+        elif(nameFunc == 'g_4'):
+            coeffs = compare_fit_panelA(g_4,Init,Vandermonde,Threeterm,K,lower, upper)#t_polynomial_zeros(-(alpha), (alpha), K)#
+        elif(nameFunc == 'g_band_rejection'):
+            coeffs = compare_fit_panelA(g_band_rejection,Init,Vandermonde,Threeterm,K,lower, upper)#t_polynomial_zeros(-(alpha), (alpha), K)#
+        elif(nameFunc == 'g_band_pass'):
+            coeffs = compare_fit_panelA(g_band_pass,Init,Vandermonde,Threeterm,K,lower, upper)
+        elif(nameFunc == 'g_low_pass'):
+            coeffs = compare_fit_panelA(g_low_pass,Init,Vandermonde,Threeterm,K,lower, upper)
+        elif(nameFunc == 'g_high_pass'):
+            coeffs = compare_fit_panelA(g_high_pass,Init,Vandermonde,Threeterm,K,lower, upper)
+        elif(nameFunc == 'g_comb'):
+            coeffs = compare_fit_panelA(g_comb,Init,Vandermonde,Threeterm,K,lower, upper)
+        else:
+            coeffs = compare_fit_panelA(g_fullRWR,Init,K)
+
+        
+        #coeffs = np.divide(coeffs, division)
+        TEMP = coeffs
+        #TEMP = j_polynomial_zeros(self.K,0,1)
+
+    temp = Parameter(torch.tensor(TEMP))
+    
+    
+    coe_tmp = torch.flip(temp, dims=(0,))
+    coe_tmp=temp
+    coe=coe_tmp.clone()
+    return coe
+
 # Global Attention Mechanism
 class feature_attention(nn.Module):
     def __init__(self, input_dim, output_dim, kernel_size=5, rate=4):
         super(feature_attention, self).__init__()
         self.nconv = nn.Conv2d(input_dim, output_dim, kernel_size=(1, 1))
-        self.channel_attention = nn.Sequential(
-            nn.Linear(output_dim, int(output_dim / rate)),
-            nn.ReLU(inplace=True),
-            nn.Linear(int(output_dim / rate), output_dim)
+        self.channel_attention = nn.Sequential(  
+            nn.Linear(output_dim, int(output_dim / rate)),  
+            nn.ReLU(inplace=True),  
+            nn.Linear(int(output_dim / rate), output_dim)  
         )
-        self.spatial_attention = nn.Sequential(
-            nn.Conv2d(output_dim, int(output_dim / rate), kernel_size=(1, kernel_size),
-                      padding=(0, (kernel_size - 1) // 2)),
-            nn.BatchNorm2d(int(output_dim / rate)),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(int(output_dim / rate), output_dim, kernel_size=(1, kernel_size),
-                      padding=(0, (kernel_size - 1) // 2)),
-            nn.BatchNorm2d(output_dim)
+        self.spatial_attention = nn.Sequential(  
+            nn.Conv2d(output_dim, int(output_dim / rate), kernel_size=(1, kernel_size), padding=(0, (kernel_size - 1) // 2)),  
+            nn.BatchNorm2d(int(output_dim / rate)),  
+            nn.ReLU(inplace=True),  
+            nn.Conv2d(int(output_dim / rate), output_dim, kernel_size=(1, kernel_size), padding=(0, (kernel_size - 1) // 2)),  
+            nn.BatchNorm2d(output_dim)  
         )
-
+        
     def forward(self, x):
         x = x.permute(0, 3, 2, 1)  # [B, D, N, T]
         x = self.nconv(x)  # 扩展数据的特征维度
-        b, c, n, t = x.shape
+        b, c, n, t = x.shape  
         x_permute = x.permute(0, 2, 3, 1)  # [B, N, T, C]
-        x_att_permute = self.channel_attention(x_permute)
+        x_att_permute = self.channel_attention(x_permute) 
         x_channel_att = x_att_permute.permute(0, 3, 1, 2)  # [B, C, N, T]
         x = x * x_channel_att
         x_spatial_att = self.spatial_attention(x).sigmoid()
         out = x * x_spatial_att
         return out.permute(0, 3, 2, 1)
 
-
-class AVWGCN(nn.Module):  # hid=64 + 64, 2 * 64, 2, 8
+class AVWGCN(nn.Module):
     def __init__(self, in_dim, out_dim, cheb_k, embed_dim):
         """
         :param in_dim: 输入维度
@@ -762,40 +874,9 @@ class AVWGCN(nn.Module):  # hid=64 + 64, 2 * 64, 2, 8
         :param embed_dim: 节点的嵌入维度
         """
         super(AVWGCN, self).__init__()
-        self.cheb_k = cheb_k  # embed_dim, cheb_k, in_dim, out_dim
-        self.weights_pool = nn.Parameter(torch.FloatTensor(embed_dim, cheb_k, in_dim, out_dim))  # 8,2,128,128
+        self.cheb_k = cheb_k
+        self.weights_pool = nn.Parameter(torch.FloatTensor(embed_dim, cheb_k, in_dim, out_dim))
         self.bias_pool = nn.Parameter(torch.FloatTensor(embed_dim, out_dim))
-
-    def forward_adj(self, x, adj):
-        """
-        :param x: (B, N, C_in)
-        :param node_embedding: (N, D), 这里的node_embedding是可学习的
-        :return: (B, N, C_out)
-        """
-        node_num = adj.shape[0]
-        # 自适应的学习节点间的内在隐藏关联获取邻接矩阵
-        # D^(-1/2)AD^(-1/2)=softmax(ReLU(E * E^T)) - (N, N)
-        # support = F.softmax(F.relu(torch.mm(adj, adj.transpose(0, 1))), dim=1)
-        support = F.softmax(F.relu(adj.t()), dim=1)
-        # support = node_embedding
-
-        # 这里得到的support表示标准化的拉普拉斯矩阵
-        support_set = [torch.eye(node_num).to(support.device), support]
-        for k in range(2, self.cheb_k):
-            # Z(k) = 2 * L * Z(k-1) - Z(k-2)
-            support_set.append(torch.matmul(2 * support, support_set[-1]) - support_set[-2])
-            # support_set.append(support_set[-1])
-        supports = torch.stack(support_set, dim=0)  # (K, N, N)
-        # (N, D) * (D, K, C_in, C_out) -> (N, K, C_in, C_out)
-        weights = torch.einsum('nd, dkio->nkio', adj, self.weights_pool)
-        # (N, D) * (D, C_out) -> (N, C_out)
-        bias = torch.matmul(adj, self.bias_pool)
-
-        # 多阶切比雪夫计算：(K, N, N) * (B, N, C_in) -> (B, K, N, C_in)
-        x_g = torch.einsum("knm,bmc->bknc", supports, x)  # (B, K, N, C_in) 很好奇为什么不在dim=1相加?
-        x_g = x_g.permute(0, 2, 1, 3)  # (B, N, K, C_in) * (N, K, C_in, C_out)
-        x_gconv = torch.einsum('bnki,nkio->bno', x_g, weights) + bias  # (B, N, C_out)
-        return x_gconv
 
     def forward(self, x, node_embedding):
         """
@@ -806,16 +887,15 @@ class AVWGCN(nn.Module):  # hid=64 + 64, 2 * 64, 2, 8
         node_num = node_embedding.shape[0]
         # 自适应的学习节点间的内在隐藏关联获取邻接矩阵
         # D^(-1/2)AD^(-1/2)=softmax(ReLU(E * E^T)) - (N, N)
+        coeffs = generateCoeff(11, 'Chebyshev', 'g_high_pass', False, False, 0.00001, 2.0000, True)
         support = F.softmax(F.relu(torch.mm(node_embedding, node_embedding.transpose(0, 1))), dim=1)
-        # support = node_embedding
-
+        support = coeffs[0]*support
         # 这里得到的support表示标准化的拉普拉斯矩阵
         support_set = [torch.eye(node_num).to(support.device), support]
         for k in range(2, self.cheb_k):
             # Z(k) = 2 * L * Z(k-1) - Z(k-2)
-            support_set.append(torch.matmul(2 * support, support_set[-1]) - support_set[-2])
-            # support_set.append(support_set[-1])
-        supports = torch.stack(support_set, dim=0)  # (K, N, N)
+            support_set.append(torch.matmul(2 * coeffs[k]*support, support_set[-1]) - support_set[-2])
+        supports = torch.stack(support_set, dim=0) # (K, N, N)
         # (N, D) * (D, K, C_in, C_out) -> (N, K, C_in, C_out)
         weights = torch.einsum('nd, dkio->nkio', node_embedding, self.weights_pool)
         # (N, D) * (D, C_out) -> (N, C_out)
@@ -826,7 +906,6 @@ class AVWGCN(nn.Module):  # hid=64 + 64, 2 * 64, 2, 8
         x_g = x_g.permute(0, 2, 1, 3)  # (B, N, K, C_in) * (N, K, C_in, C_out)
         x_gconv = torch.einsum('bnki,nkio->bno', x_g, weights) + bias  # (B, N, C_out)
         return x_gconv
-
 
 class AGCRNCell(nn.Module):
     def __init__(self, num_node, in_dim, out_dim, cheb_k, embed_dim):
@@ -843,7 +922,7 @@ class AGCRNCell(nn.Module):
         # 两个门控 forget、update
         z_r = torch.sigmoid(self.gate(input_and_state, node_embedding))
         z, r = torch.split(z_r, self.hidden_dim, dim=-1)
-        candidate = torch.cat((x, r * state), dim=-1)
+        candidate = torch.cat((x, r*state), dim=-1)
         hc = torch.tanh(self.update(candidate, node_embedding))
         h = z * state + (1 - z) * hc
         return h
@@ -851,8 +930,7 @@ class AGCRNCell(nn.Module):
     def init_hidden_state(self, batch_size):
         return torch.zeros(batch_size, self.num_node, self.hidden_dim)
 
-
-class AVWDCRNN(nn.Module):  # AVWDCRNN(num_node, hidden_dim, hidden_dim, cheb_k, embed_dim, num_layers)
+class AVWDCRNN(nn.Module):
     def __init__(self, num_node, in_dim, out_dim, cheb_k, embed_dim, num_layers=1):
         super(AVWDCRNN, self).__init__()
         assert num_layers >= 1, "At least one DCRNN layer in the Encoder."
@@ -881,7 +959,7 @@ class AVWDCRNN(nn.Module):  # AVWDCRNN(num_node, hidden_dim, hidden_dim, cheb_k,
                 state = self.dcrnnn_cells[i](current_inputs[:, t, :, :], state, node_embedding)
                 inner_states.append(state)
             output_hidden.append(state)  # 最后一个时间步输出的隐藏状态
-            current_inputs = torch.stack(inner_states, dim=1)  # (B, T, N, hid_dim)
+            current_inputs = torch.stack(inner_states, dim=1) # (B, T, N, hid_dim)
 
         # current_inputs: the outputs of last layer: (B, T, N, hidden_dim)
         # output_hidden: the last state for each layer: (num_layers, B, N, hidden_dim)
@@ -893,16 +971,6 @@ class AVWDCRNN(nn.Module):  # AVWDCRNN(num_node, hidden_dim, hidden_dim, cheb_k,
         for i in range(self.num_layers):
             init_states.append(self.dcrnnn_cells[i].init_hidden_state(batch_size))
         return torch.stack(init_states, dim=0)  # (num_layers, B, N, hidden_dim)
-
-    def init_hidden2(self, batch_size, adj):
-        init_states = []  # Initialize hidden states list for all layers
-        for i in range(self.num_layers):
-            # Assuming each cell in dcrnnn_cells has an init_hidden_state method
-            init_states.append(self.dcrnnn_cells[i].init_hidden_state(batch_size, adj))
-
-        # Stack the initialized states along the first dimension to get (num_layers, B, N, hidden_dim)
-        return torch.stack(init_states, dim=0)
-
 
 class PositionalEncoding(nn.Module):
     def __init__(self, out_dim, max_len=12):
@@ -923,7 +991,6 @@ class PositionalEncoding(nn.Module):
         x = x + Variable(self.pe.to(x.device), requires_grad=False)
         return x
 
-
 class MultiHeadAttention(nn.Module):
     def __init__(self, embed_size, heads):
         super(MultiHeadAttention, self).__init__()
@@ -933,7 +1000,7 @@ class MultiHeadAttention(nn.Module):
         self.heads = heads
         # 要求嵌入层特征维度可以被heads整除
         assert embed_size % heads == 0
-        self.head_dim = embed_size // heads  # every head dimension
+        self.head_dim = embed_size // heads   # every head dimension
 
         self.W_V = nn.Linear(self.embed_size, self.head_dim * heads, bias=False)
         self.W_K = nn.Linear(self.embed_size, self.head_dim * heads, bias=False)
@@ -953,7 +1020,7 @@ class MultiHeadAttention(nn.Module):
         :param x: [B, T, N, D]
         """
         batch_size, _, _, d_k = x.shape
-        x = self.positional_encoding(x).permute(0, 2, 1, 3)  # [B, N, T, D]
+        x = self.positional_encoding(x).permute(0, 2, 1, 3)   # [B, N, T, D]
         # 计算Attention的Q、K、V
         Q = self.W_Q(x)
         K = self.W_K(x)
@@ -964,14 +1031,13 @@ class MultiHeadAttention(nn.Module):
         # 考虑上下文的长期依赖信息
         scores = torch.matmul(Q, K.transpose(-1, -2)) / torch.sqrt(torch.tensor(d_k, dtype=torch.float))
         attention = F.softmax(scores, dim=-1)  # [k * B, N, T, T]
-        context = torch.matmul(attention, V)  # context vector
+        context = torch.matmul(attention, V)   # context vector
         context = torch.cat(torch.split(context, batch_size, dim=0), dim=-1)
-        context = context + x  # residual connection
+        context = context + x    # residual connection
         out = self.norm1(context)
         out = self.fc(out) + context  # residual connection
         out = self.norm2(out)
         return out
-
 
 class GraphAttentionLayer(nn.Module):
     def __init__(self, in_features, out_features, adj, dropout, alpha, concat=True):
@@ -999,7 +1065,7 @@ class GraphAttentionLayer(nn.Module):
         e = self.leakyrelu(e)
 
         zero_vec = -9e15 * torch.ones_like(e)
-        attention = torch.where(self.adj.to('cuda:0') > 0, e, zero_vec)
+        attention = torch.where(self.adj > 0, e, zero_vec)
         attention = F.softmax(attention, dim=1)
         attention = F.dropout(attention, self.dropout, training=self.training)
         out = torch.matmul(attention, Wh)
@@ -1008,649 +1074,8 @@ class GraphAttentionLayer(nn.Module):
         else:
             return out
 
-
-class GPR_prop(MessagePassing):
-    def __init__(self, K, alpha, Init, Gamma=None, **kwargs):
-        super(GPR_prop, self).__init__(aggr='add', **kwargs)
-        self.K = K
-        self.alpha = alpha
-        self.Init = Init
-        self.Gamma = Gamma
-
-        assert Init in ['SGC', 'PPR', 'NPPR', 'Random', 'WS']
-        if Init == 'SGC':
-            TEMP = torch.zeros(K + 1)
-            TEMP[int(alpha)] = 1.0
-        elif Init == 'PPR':
-            TEMP = alpha * (1 - alpha) ** torch.arange(K + 1)
-            TEMP[-1] = (1 - alpha) ** K
-        elif Init == 'NPPR':
-            TEMP = (alpha) ** torch.arange(K + 1)
-            TEMP = TEMP / torch.sum(torch.abs(TEMP))
-        elif Init == 'Random':
-            bound = torch.sqrt(torch.tensor(3.0 / (K + 1)))
-            TEMP = torch.rand(K + 1) * 2 * bound - bound
-            TEMP = TEMP / torch.sum(torch.abs(TEMP))
-        elif Init == 'WS':
-            TEMP = Gamma
-
-        self.temp = Parameter(torch.tensor(TEMP))
-
-    def reset_parameters(self):
-        torch.nn.init.zeros_(self.temp)
-        for k in range(self.K + 1):
-            self.temp.data[k] = self.alpha * (1 - self.alpha) ** k
-        self.temp.data[-1] = (1 - self.alpha) ** self.K
-
-    def forward(self, x, edge_index):
-        edge_index, norm = gcn_norm(edge_index, num_nodes=x.size(1), dtype=x.dtype)
-        # edge_index, norm = custom_gcn_norm(edge_index, num_nodes=x.size(1), dtype=x.dtype)
-        hidden = x * self.temp[0]
-        x = x.T
-        hidden = hidden.T
-        for k in range(self.K):
-            x = self.propagate(edge_index, x=x, norm=norm)
-            # x = self.custom_propagate(edge_index, x=x, norm=norm)
-            # x = self.custom_propagate(edge_index, x=x.T, norm=norm)
-            gamma = self.temp[k + 1]
-            # hidden = hidden + gamma * x
-            hidden = hidden + gamma * x
-        return hidden
-
-    def message(self, x_j, norm):
-        return norm.view(-1, 1) * x_j
-
-    def _repr_(self):
-        return '{}(K={}, temp={})'.format(self._class.name_, self.K, self.temp)
-
-
-class GPRGNN(torch.nn.Module):
-    def __init__(self, num_node, input_dim, output_dim, hidden, cheb_k, num_layers, embed_dim):
-        super(GPRGNN, self).__init__()
-        self.lin1 = Linear(512, 64)  # (input_dim, hidden) 19, 1
-        self.lin2 = Linear(64, 512)
-
-        self.prop1 = GPR_prop(cheb_k, 0.5, 'PPR', None)
-
-        self.dprate = 0.5
-        self.dropout = 0.2
-        self.num_layers = num_layers
-        ###
-        self.dcrnnn_cells = nn.ModuleList()
-        self.dcrnnn_cells.append(AGCRNCell(num_node, input_dim, output_dim, cheb_k, embed_dim))
-        for _ in range(1, num_layers):
-            self.dcrnnn_cells.append(AGCRNCell(num_node, input_dim, output_dim, cheb_k, embed_dim))
-
-    def reset_parameters(self):
-        self.prop1.reset_parameters()
-
-    def forward(self, x):
-        edge_index = read_edge_list_csv()
-        x = F.dropout(x, p=self.dropout, training=self.training)
-        x = x.to('cpu')
-        x_reshaped = x.reshape(x.size(0), -1)  # -1 infers the remaining dimension based on the input shape
-
-        # Apply linear layer
-        x = F.relu(self.lin1(x_reshaped))
-        # x = F.relu(self.lin1(x))
-        x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.lin2(x)
-
-        if self.dprate == 0.0:
-            x = self.prop1(x, edge_index)
-            return F.log_softmax(x, dim=1)
-        else:
-            x = F.dropout(x, p=self.dprate, training=self.training)
-            x = self.prop1(x, edge_index)
-            x = x.transpose(0, 1)
-
-            # Reshape it from (5, 1216) to (5, 1, 19, 64)
-            x = x.view(x.size(0), 1, 8, 64)  # Manually reshape to (5, 1, 19, 64)
-
-            # Apply log softmax along the appropriate dimension
-            x = F.log_softmax(x, dim=3)  # Assuming the last dimension (64) is the one to apply softmax to
-            return x
-
-    def init_hidden(self, batch_size):
-        """
-        Initialize hidden states for all layers.
-
-        Args:
-        - batch_size (int): The batch size for the input data.
-
-        Returns:
-        - init_states (Tensor): Initialized hidden states for all layers.
-        """
-        init_states = []  # Initialize hidden states list for all layers
-        for i in range(self.num_layers):
-            # Assuming each cell in dcrnnn_cells has an init_hidden_state method
-            init_states.append(self.dcrnnn_cells[i].init_hidden_state(batch_size))
-
-        # Stack the initialized states along the first dimension to get (num_layers, B, N, hidden_dim)
-        return torch.stack(init_states, dim=0)
-
-
-##############################################################
-class APPNP(MessagePassing):
-    def __init__(self, K, alpha, dropout=0.,
-                 cached=False, add_self_loops=True,
-                 normalize=True, **kwargs):
-        kwargs.setdefault('aggr', 'add')
-        super().__init__(**kwargs)
-        self.K = K
-        self.alpha = alpha
-        self.dropout = dropout
-        self.cached = cached
-        self.add_self_loops = add_self_loops
-        self.normalize = normalize
-
-        self._cached_edge_index = None
-        self._cached_adj_t = None
-
-    def reset_parameters(self):
-        super().reset_parameters()
-        self._cached_edge_index = None
-        self._cached_adj_t = None
-
-    def forward(self, x, edge_index, edge_weight=None):
-        # print("APPNP.forward - Initial x:", x.size())
-        # print("APPNP.forward - Initial edge_index:", edge_index.size())
-        nodes = 19
-        if self.normalize:
-            if isinstance(edge_index, torch.Tensor):
-                cache = self._cached_edge_index
-                if cache is None:
-                    edge_index = read_edge_list_csv()
-                    # print("Edge index:", edge_index)
-                    # print("Number of nodes:", (int)(x.size(1) / 64))
-                    edge_index, edge_weight = gcn_norm(edge_index, edge_weight, num_nodes=(x.size(1)),
-                                                       dtype=x.dtype)
-                    # edge_index = torch.tensor([
-                    # [3, 2, 0, 1, 1, 7, 6, 4, 5, 5, 8, 11, 12, 11, 10, 9, 9, 13, 10, 14, 17, 17, 18, 16],
-                    # [2, 1, 1, 6, 7, 4, 5, 8, 8, 11, 12, 12, 9, 10, 9, 13, 14, 14, 17, 18, 18, 16, 15, 15]
-                    # ])
-                    # print("APP Edge index shape:", edge_index.shape)
-                    # print("Edge index content:", edge_index)
-                    # print("Edge weight shape:", edge_weight.shape)
-                    # print("APP Edge weight content:", edge_weight)
-                    if self.cached:
-                        self._cached_edge_index = edge_index
-                else:
-                    edge_index = cache
-                    # edge_index = torch.tensor([
-            # [3, 2, 0, 1, 1, 7, 6, 4, 5, 5, 8, 11, 12, 11, 10, 9, 9, 13, 10, 14, 17, 17, 18, 16],
-            # [2, 1, 1, 6, 7, 4, 5, 8, 8, 11, 12, 12, 9, 10, 9, 13, 14, 14, 17, 18, 18, 16, 15, 15]
-            # ])
-
-            elif isinstance(edge_index, SparseTensor):
-                cache = self._cached_adj_t
-                if cache is None:
-                    edge_index = gcn_norm(edge_index, num_nodes=x.size(1), dtype=x.dtype)
-                    if self.cached:
-                        self._cached_adj_t = edge_index
-                else:
-                    edge_index = cache
-
-        # print("APPNP.forward - Normalized edge_index:", edge_index.size())
-        x = x.T
-        h = x
-
-        for k in range(self.K):
-            # print(f"APPNP.forward - Iteration {k}, x size:", x.size())
-            if self.dropout > 0 and self.training:
-                x = F.dropout(x, p=self.dropout, training=self.training)
-                # print(f"APPNP.forward - After dropout, x size:", x.size())
-
-            # propagate_type: (x: Tensor)
-            x = self.propagate(edge_index, x=x)
-            # print(f"APPNP.forward - After propagate, x size:", x.size())
-
-            x = x * (1 - self.alpha)
-            # print("Shape of x:", x.shape)
-            # print("Shape of h:", h.shape)
-            # h = h.T
-            x = x + self.alpha * h
-
-        # print("APPNP.forward - Final x size:", x.size())
-        #x = x.T
-        # h = x
-        return x
-
-    def message(self, x_j: Tensor) -> Tensor:
-        return x_j
-
-    def message_and_aggregate(self, adj_t: Adj, x: Tensor) -> Tensor:
-        return spmm(adj_t, x, reduce=self.aggr)
-
-    def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(K={self.K}, alpha={self.alpha})'
-
-
-class APPNP_Net(torch.nn.Module):
-    def __init__(self, num_node, input_dim, output_dim, hidden, cheb_k, num_layers, embed_dim):
-        super(APPNP_Net, self).__init__()
-        self.lin1 = Linear(512, 64)
-        self.lin2 = Linear(64, 512)
-        self.prop1 = APPNP(cheb_k, 0.5, 0.2, False, True, True)
-        self.dropout = 0.2
-        self.num_layers = num_layers
-        self.dcrnnn_cells = nn.ModuleList()
-        self.dcrnnn_cells.append(AGCRNCell(num_node, input_dim, output_dim, cheb_k, embed_dim))
-        for _ in range(1, num_layers):
-            self.dcrnnn_cells.append(AGCRNCell(num_node, input_dim, output_dim, cheb_k, embed_dim))
-
-    def reset_parameters(self):
-        self.lin1.reset_parameters()
-        self.lin2.reset_parameters()
-
-    def forward(self, x):
-        edge_index = read_edge_list_csv()
-        # edge_index, norm = gcn_norm(edge_index, num_nodes=x.size(1), dtype=x.dtype)
-
-        # print(edge_index)
-        # print("Initial x:", x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
-        x = x.to('cpu')
-
-        # Reshape the input
-        x_reshaped = x.reshape(x.size(0), -1)  # -1 infers the remaining dimension based on the input shape
-        # print("x reshaped to:", x_reshaped.size())
-
-        x = F.relu(self.lin1(x_reshaped))
-        x = F.dropout(x, p=self.dropout, training=self.training)
-
-        # print("After linear and dropout, x size:", x.size())
-        # print("Edge index:", edge_index)
-
-        x = self.lin2(x)
-        # print("After second linear layer, x size:", x.size())
-
-        x = self.prop1(x, edge_index)
-        # print("After propagation, x size:", x.size())
-        x = x.transpose(0, 1)
-        # Reshape it from (5, 1216) to (5, 1, 19, 64)
-        x = x.reshape(x.size(0), 1, 8, 64)  # Manually reshape to (5, 1, 19, 64)
-        # print("After reshaping, x size:", x.size())
-
-        # Apply log softmax along the appropriate dimension
-        x = F.log_softmax(x, dim=3)  # Assuming the last dimension (64) is the one to apply softmax to
-        # print("After log_softmax, x size:", x.size())
-        return x
-
-    def init_hidden(self, batch_size):
-        """
-        Initialize hidden states for all layers.
-
-        Args:
-        - batch_size (int): The batch size for the input data.
-
-        Returns:
-        - init_states (Tensor): Initialized hidden states for all layers.
-        """
-        init_states = []  # Initialize hidden states list for all layers
-        for i in range(self.num_layers):
-            # Assuming each cell in dcrnnn_cells has an init_hidden_state method
-            init_states.append(self.dcrnnn_cells[i].init_hidden_state(batch_size))
-
-        # Stack the initialized states along the first dimension to get (num_layers, B, N, hidden_dim)
-        return torch.stack(init_states, dim=0)
-
-# =====================================================
-#   Generalized Arnoldi
-# =====================================================
-
-
-class GArnoldi_prop(MessagePassing):
-    '''
-    propagation class for GPR_GNN
-    '''
-
-    def __init__(self, K, alpha, Init, nameFunc, homophily, Vandermonde, lower, upper, Threeterm, Gamma=None, bias=True, **kwargs):
-        super(GArnoldi_prop, self).__init__(aggr='add', **kwargs)
-        self.K = K
-        self.Init = Init
-        self.alpha = alpha
-        self.homophily = homophily
-        self.Vandermonde = Vandermonde
-        self.nameFunc = nameFunc
-        self.lower = lower
-        self.upper = upper
-        self.Threeterm = Threeterm
-        #self.division =  
-        assert Init in ['Monomial', 'Chebyshev', 'Legendre', 'Jacobi', 'PPR','SChebyshev']
-        if Init == 'Monomial':
-            # SGC-like, note that in this case, alpha has to be a integer. It means where the peak at when initializing GPR weights.
-            #x = m_polynomial_zeros(-(self.alpha), (self.alpha), self.K)
-            if(nameFunc == 'g_0'):
-                self.coeffs =  compare_fit_panelA(g_0, Init, Vandermonde, Threeterm,self.K, self.lower, self.upper) # m_polynomial_zeros(-(self.alpha), (self.alpha), self.K)
-            elif(nameFunc == 'g_1'):
-                self.coeffs =  compare_fit_panelA(g_1, Init, Vandermonde, Threeterm, self.K, self.lower, self.upper) 
-            elif(nameFunc == 'g_2'):
-                self.coeffs =  compare_fit_panelA(g_2,Init,Vandermonde, Threeterm, self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_3'):
-                self.coeffs =  compare_fit_panelA(g_3,Init,Vandermonde, Threeterm, self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_4'):
-                self.coeffs = compare_fit_panelA(g_4,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)#
-            elif(nameFunc == 'g_band_rejection'):
-                self.coeffs = compare_fit_panelA(g_band_rejection,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_band_pass'):
-                self.coeffs = compare_fit_panelA(g_band_pass,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_low_pass'):
-                self.coeffs = compare_fit_panelA(g_low_pass,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_high_pass'):
-                self.coeffs = compare_fit_panelA(g_high_pass,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_comb'):
-               self.coeffs = compare_fit_panelA(g_comb,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)
-            else:
-                self.coeffs = compare_fit_panelA(g_fullRWR,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)
-            l = [i for i in range (1, len(self.coeffs)+1) ]
-            self.coeffs = filter_jackson(self.coeffs)
-            TEMP = self.coeffs
-            
-            # TEMP = p_polynomial_zeros(self.K)
-            # TEMP = j_polynomial_zeros(self.K,0,1)
-        elif Init == 'Chebyshev':
-            # PPR-like
-            if(nameFunc == 'g_0'):
-                self.coeffs = compare_fit_panelA(g_0, Init, Vandermonde,Threeterm, self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_1'):
-                self.coeffs = compare_fit_panelA(g_1, Init, Vandermonde,Threeterm, self.K,self.lower, self.upper) 
-            elif(nameFunc == 'g_2'):
-                self.coeffs = compare_fit_panelA(g_2,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_3'):
-                self.coeffs = compare_fit_panelA(g_3,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)#
-            elif(nameFunc == 'g_4'):
-                self.coeffs = compare_fit_panelA(g_4,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)#
-            elif(nameFunc == 'g_band_rejection'):
-                self.coeffs = compare_fit_panelA(g_band_rejection,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)#
-            elif(nameFunc == 'g_band_pass'):
-                self.coeffs = compare_fit_panelA(g_band_pass,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_low_pass'):
-                self.coeffs = compare_fit_panelA(g_low_pass,Init,Vandermonde,Threeterm, self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_high_pass'):
-                self.coeffs = compare_fit_panelA(g_high_pass,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_comb'):
-                self.coeffs = compare_fit_panelA(g_comb,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)
-            else:
-                self.coeffs = compare_fit_panelA(g_fullRWR,Init, Vandermonde,self.K)
-            l = [i for i in range (1, len(self.coeffs)+1) ]
-            #self.coeffs = np.divide(self.coeffs, l)
-            self.coeffs = filter_jackson(self.coeffs)
-            #self.coeffs = np.divide(self.coeffs, self.division)
-            
-            TEMP = self.coeffs
-            #TEMP = t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)
-        elif Init == 'Legendre':
-            #TEMP = p_polynomial_zeros(self.K)
-            if(nameFunc == 'g_0'):
-                self.coeffs = compare_fit_panelA(g_0, Init, Vandermonde, Threeterm,self.K,self.lower, self.upper)#p_polynomial_zeros(self.K) 
-            elif(nameFunc == 'g_1'):
-                self.coeffs = compare_fit_panelA(g_1, Init, Vandermonde,Threeterm,self.K,self.lower, self.upper) #p_polynomial_zeros(self.K)
-            elif(nameFunc == 'g_2'):
-                self.coeffs = compare_fit_panelA(g_2,Init,Vandermonde, Threeterm,self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_3'):
-                self.coeffs = compare_fit_panelA(g_3,Init,Vandermonde, Threeterm,self.K,self.lower, self.upper)#p_polynomial_zeros(self.K)
-            elif(nameFunc == 'g_4'):
-                self.coeffs = compare_fit_panelA(g_4,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)#
-            elif(nameFunc == 'g_band_rejection'):
-                self.coeffs = compare_fit_panelA(g_band_rejection,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)#
-            elif(nameFunc == 'g_band_pass'):
-                self.coeffs = compare_fit_panelA(g_band_pass,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_low_pass'):
-                self.coeffs = compare_fit_panelA(g_low_pass,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_high_pass'):
-                self.coeffs = compare_fit_panelA(g_high_pass,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_comb'):
-                self.coeffs = compare_fit_panelA(g_comb,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)
-            else:
-                self.coeffs = compare_fit_panelA(g_fullRWR,Init,self.K,self.lower, self.upper)
-            l = [i for i in range (1, len(self.coeffs)+1)]
-            self.coeffs = filter_jackson(self.coeffs)
-            #self.coeffs = np.divide(self.coeffs, l)
-            #self.coeffs = np.divide(self.coeffs, self.division)
-            
-            TEMP = self.coeffs
-        elif Init == 'Jacobi':
-            if(nameFunc == 'g_0'):
-                self.coeffs = compare_fit_panelA(g_0, Init, Vandermonde, Threeterm,self.K,self.lower, self.upper)#p_polynomial_zeros(self.K) 
-            elif(nameFunc == 'g_1'):
-                self.coeffs = compare_fit_panelA(g_1, Init, Vandermonde,Threeterm,self.K,self.lower, self.upper) #p_polynomial_zeros(self.K)
-            elif(nameFunc == 'g_2'):
-                self.coeffs = compare_fit_panelA(g_2,Init,Vandermonde, Threeterm,self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_3'):
-                self.coeffs = compare_fit_panelA(g_3,Init,Vandermonde, Threeterm,self.K,self.lower, self.upper)#p_polynomial_zeros(self.K)
-            elif(nameFunc == 'g_4'):
-                self.coeffs = compare_fit_panelA(g_4,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)#
-            elif(nameFunc == 'g_band_rejection'):
-                self.coeffs = compare_fit_panelA(g_band_rejection,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)#
-            elif(nameFunc == 'g_band_pass'):
-                self.coeffs = compare_fit_panelA(g_band_pass,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_low_pass'):
-                self.coeffs = compare_fit_panelA(g_low_pass,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_high_pass'):
-                self.coeffs = compare_fit_panelA(g_high_pass,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)
-            elif(nameFunc == 'g_comb'):
-                self.coeffs = compare_fit_panelA(g_comb,Init,Vandermonde,Threeterm,self.K,self.lower, self.upper)
-            else:
-                self.coeffs = compare_fit_panelA(g_fullRWR,Init,self.K)
-            l = [i for i in range (1, len(self.coeffs)+1) ]
-            #self.coeffs = np.divide(self.coeffs, l)
-            
-            #self.coeffs = np.divide(self.coeffs, self.division)
-            TEMP = self.coeffs
-            #TEMP = j_polynomial_zeros(self.K,0,1)
-        elif Init == 'SChebyshev':
-            #TEMP = s_polynomial_zeros(self.K)
-            if(nameFunc == 'g_0'):
-                self.coeffs = compare_fit_panelA(g_0, Init, self.K)
-            elif(nameFunc == 'g_1'):
-                self.coeffs = compare_fit_panelA(g_1, Init, self.K) 
-            elif(nameFunc == 'g_2'):
-                self.coeffs = compare_fit_panelA(g_2,Init,self.K)
-            elif(nameFunc == 'g_3'):
-                self.coeffs = compare_fit_panelA(g_3,Init,self.K)
-            else:
-                self.coeffs = compare_fit_panelA(g_fullRWR,Init,self.K)
-            TEMP = self.coeffs
-        elif Init == 'PPR':
-            TEMP = alpha*(1-alpha)**np.arange(K+1)
-            TEMP[-1] = (1-alpha)**K
-        elif Init == 'WS':
-            # Specify Gamma
-            TEMP = Gamma
-
-        self.temp = Parameter(torch.tensor(TEMP))
-
-    def reset_parameters(self):
-        torch.nn.init.zeros_(self.temp)
-        if(self.Init == 'Monomial'):
-            self.temp.data = m_polynomial_zeros(self.lower, self.upper, self.K)#m_polynomial_zeros(-(self.alpha), (self.alpha), self.K)
-        elif (self.Init == 'Chebyshev'):
-           self.temp.data = t_polynomial_zeros(self.lower, self.upper, self.K)#t_polynomial_zeros(-(self.alpha), (self.alpha), self.K)
-        elif (self.Init == 'Legendre'):
-            self.temp.data = p_polynomial_zeros(self.K)
-        elif (self.Init == 'Jacobi'):
-            self.temp.data = j_polynomial_zeros(self.K,0,1)
-        else: 
-            for k in range(self.K+1):
-                self.temp.data[k] = self.alpha*(1-self.alpha)**k
-            self.temp.data[-1] = (1-self.alpha)**self.K
-
-    # def forward(self, x, edge_index, edge_weight=None):
-    #     edge_index, norm = gcn_norm(
-    #         edge_index, edge_weight, num_nodes=x.size(0), dtype=x.dtype)
-    #     edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='sym', dtype=x.dtype, num_nodes=x.size(self.node_dim))
-    #     #edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
-    #     #2I-L
-    #     edge_index2, norm2=add_self_loops(edge_index1,-norm1,fill_value=2.,num_nodes=x.size(self.node_dim))
-    #     hidden = self.temp[self.K-1]*x
-    #     #hidden = x*(self.temp[0])
-    #     for k in range(self.K-2,-1,-1):
-    #         if (self.homophily):
-    #             x = self.propagate(edge_index, x=x, norm=norm)             
-    #         else:       
-    #             x = self.propagate(edge_index1, x=x, norm=norm1)
-    #         gamma = self.temp[k]
-            
-    #         x = x + gamma*hidden
-    #     return x
-    def forward(self, x, edge_index,edge_weight=None):
-        # coe_tmp=F.relu(self.temp)
-        # coe=coe_tmp.clone()
-       
-        # for i in range(self.K+1):
-        #     coe[i]=coe_tmp[0]*cheby(i,math.cos((self.K+0.5)*math.pi/(self.K+1)))
-        #     for j in range(1,self.K+1):
-        #         x_j=math.cos((self.K-j+0.5)*math.pi/(self.K+1))
-        #         coe[i]=coe[i]+coe_tmp[j]*cheby(i,x_j)
-        #     coe[i]=2*coe[i]/(self.K+1)
-       
-        #print(self.temp)
-        #coe = self.temp
-        if(self.Threeterm):
-            coe_tmp = torch.flip(self.temp, dims=(0,))
-            coe_tmp=self.temp
-            coe=coe_tmp.clone()
-            # coe2 = coe_tmp.clone()
-            # for i in range (self.K):
-            #     coe2[i] = coe[self.K-1-i]
-            
-            # coe = coe2.clone()
-           
-            #edge_index, norm = gcn_norm(edge_index, edge_weight, num_nodes=x.size(0), dtype=x.dtype)
-            edge_index, norm = gcn_norm(edge_index, num_nodes=x.size(1), dtype=x.dtype)
-            #L=I-D^(-0.5)AD^(-0.5)
-           # edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='sym', dtype=x.dtype, num_nodes=x.size(self.node_dim))
-            edge_index1, norm1 = get_laplacian(edge_index, normalization='sym',
-                                           num_nodes=x.size(1))
-            #L_tilde=L-I
-            edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
-            x = x.T
-            Tx_0=x
-            if (self.homophily):
-                Tx_1=self.propagate(edge_index,x=x,norm=norm,size=None)
-            else:
-                Tx_1=self.propagate(edge_index1,x=x,norm=norm1)
-            out=coe[0]*Tx_0+coe[1]*Tx_1
-    
-            for i in range(2,self.K-1):
-                if (self.homophily):
-                    Tx_2=self.propagate(edge_index,x=Tx_1,norm=norm,size=None)
-                else:
-                    Tx_2=self.propagate(edge_index1,x=Tx_1,norm=norm1,size=None)
-                Tx_2=2*Tx_2-Tx_0
-                out=out+coe[i]*Tx_2
-                Tx_0,Tx_1 = Tx_1, Tx_2
-            return out
-        else:
-            edge_index, norm = gcn_norm(
-                edge_index, edge_weight, num_nodes=x.size(0), dtype=x.dtype)
-            edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='sym', dtype=x.dtype, num_nodes=x.size(self.node_dim))
-            #edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
-            #2I-L
-            edge_index2, norm2=add_self_loops(edge_index1,-norm1,fill_value=2.,num_nodes=x.size(self.node_dim))
-            hidden = self.temp[self.K-1]*x
-            #hidden = x*(self.temp[0])
-            for k in range(self.K-2,-1,-1):
-                if (self.homophily):
-                    x = self.propagate(edge_index, x=x, norm=norm)             
-                else:       
-                    x = self.propagate(edge_index1, x=x, norm=norm1)
-                gamma = self.temp[k]
-                
-                x = x + gamma*hidden
-            return x
-
-    def message(self, x_j, norm):
-        return norm.view(-1, 1) * x_j
-
-    def __repr__(self):
-        return '{}(K={}, temp={})'.format(self.__class__.__name__, self.K,
-                                          self.temp)
-
-class GARNOLDI(torch.nn.Module):
-    def __init__(self, num_node, input_dim, output_dim, hidden, cheb_k, num_layers, embed_dim):
-        super(GARNOLDI, self).__init__()
-        self.lin1 = Linear(512, 64).to(torch.device('cuda:0'))
-        self.lin2 = Linear(64, 512).to(torch.device('cuda:0'))
-        self.prop1 = GArnoldi_prop(11, 0.1, args.ArnoldiInit, args.FuncName, False,
-                                       False,0.000001, 2.0000,True, None).to(torch.device('cuda:0'))
-
-        self.ArnoldiInit = args.ArnoldiInit
-        self.dprate = 0.5
-        self.dropout = 0.2
-        self.FuncName = args.FuncName
-        self.num_layers = num_layers
-###
-        self.dcrnnn_cells = nn.ModuleList()
-        self.dcrnnn_cells.append(AGCRNCell(num_node, input_dim, output_dim, cheb_k, embed_dim))
-        for _ in range(1, num_layers):
-            self.dcrnnn_cells.append(AGCRNCell(num_node, input_dim, output_dim, cheb_k, embed_dim))
-    def reset_parameters(self):
-        self.prop1.reset_parameters()
-
-    def forward(self, x):
-        edge_index = read_edge_list_csv()
-
-        x = F.dropout(x, p=self.dropout, training=self.training).to(torch.device('cuda:0'))
-       # x = x.to('cpu')
-        x_reshaped = x.reshape(x.size(0), -1)
-        x = F.relu(self.lin1(x_reshaped))
-        x = F.dropout(x, p=self.dropout, training=self.training).to(torch.device('cuda:0'))
-        x = self.lin2(x)
-
-        if self.dprate == 0.0:
-            x = self.prop1(x, edge_index)
-            return F.log_softmax(x, dim=1)
-        else:
-            x = F.dropout(x, p=self.dprate, training=self.training).to(torch.device('cuda:0'))
-            x = self.prop1(x, edge_index)
-            x = x.transpose(0, 1)
-
-            # Reshape it from (5, 1216) to (5, 1, 19, 64)
-            x = x.reshape(x.size(0), 1, 8, 64).to(torch.device('cuda:0'))  # Manually reshape to (5, 1, 19, 64)
-
-            # Apply log softmax along the appropriate dimension
-            x = F.log_softmax(x, dim=3)
-
-            return x
-
-    def init_hidden(self, batch_size):
-        """
-        Initialize hidden states for all layers.
-
-        Args:
-        - batch_size (int): The batch size for the input data.
-
-        Returns:
-        - init_states (Tensor): Initialized hidden states for all layers.
-        """
-        init_states = []  # Initialize hidden states list for all layers
-        for i in range(self.num_layers):
-            # Assuming each cell in dcrnnn_cells has an init_hidden_state method
-            init_states.append(self.dcrnnn_cells[i].init_hidden_state(batch_size))
-
-        # Stack the initialized states along the first dimension to get (num_layers, B, N, hidden_dim)
-        return torch.stack(init_states, dim=0)
-
-####################################################################
-def read_edge_list_csv():
-    # Read the CSV file into a DataFrame
-    df = pd.read_csv('./data/Konya/konya_kavşaklar.csv')
-
-    # Extract the 'from' and 'to' columns as numpy arrays
-    edges_from = df['from'].to_numpy()
-    edges_to = df['to'].to_numpy()
-
-    # Create the edge index tensor
-    edge_index = torch.tensor([edges_from, edges_to], dtype=torch.long,device=torch.device('cuda:0'))
-
-    return edge_index
-
-
 class Model(nn.Module):
-    def __init__(self, num_node, input_dim, hidden_dim, output_dim, embed_dim, cheb_k, horizon, num_layers, heads,
-                 timesteps, A, kernel_size):
+    def __init__(self, num_node, input_dim, hidden_dim, output_dim, embed_dim, cheb_k, horizon, num_layers, heads, timesteps, A, kernel_size):
         super(Model, self).__init__()
         self.A = A
         self.timesteps = timesteps
@@ -1661,31 +1086,24 @@ class Model(nn.Module):
         self.embed_dim = embed_dim
         self.horizon = horizon
         self.num_layers = num_layers
+
         # node embed
         self.node_embedding = nn.Parameter(torch.randn(self.num_node, embed_dim), requires_grad=True)
         # encoder
         self.feature_attention = feature_attention(input_dim=input_dim, output_dim=hidden_dim, kernel_size=kernel_size)
-        # self.encoder = AVWDCRNN(num_node, hidden_dim, hidden_dim, cheb_k, embed_dim, num_layers)
-        #self.encoder = APPNP_Net(num_node, input_dim, output_dim, hidden_dim, cheb_k, num_layers, embed_dim)
-        self.encoder = GARNOLDI(num_node, input_dim, output_dim, hidden_dim, cheb_k, num_layers, embed_dim)        
-        # self.encoder = GPRGNN(num_node,input_dim,output_dim, hidden_dim, cheb_k,num_layers,embed_dim)
+        self.encoder = AVWDCRNN(num_node, hidden_dim, hidden_dim, cheb_k, embed_dim, num_layers)
         self.GraphAttentionLayer = GraphAttentionLayer(hidden_dim, hidden_dim, A, dropout=0.5, alpha=0.2, concat=True)
         self.MultiHeadAttention = MultiHeadAttention(embed_size=hidden_dim, heads=heads)
         # predict
         self.nconv = nn.Conv2d(1, self.horizon, kernel_size=(1, 1), bias=True)
         self.end_conv = nn.Conv2d(hidden_dim, 1, kernel_size=(1, 1), bias=True)
 
-    def forward(self, x,Net):
+    def forward(self, x):
         # x: (B, T, N, D)
-        self.encoder=Net
-        data=x
-        batch_size = x.shape[0] #5
-        edge_index = torch.tensor([[i, i+1] for i in range(data.shape[2] - 1)])
+        batch_size = x.shape[0]
         x = self.feature_attention(x)
         init_state = self.encoder.init_hidden(batch_size)
-        #output, _ = self.encoder(x, init_state, self.node_embedding)  # (B, T, N, hidden_dim)
-        #output, _ = self.encoder(data) #self.A,init_state
-        output= self.encoder(x) #self.A,init_state
+        output, _ = self.encoder(x, init_state, self.node_embedding)  # (B, T, N, hidden_dim)
         state = output[:, -1:, :, :]
         state = self.nconv(state)
         SAtt = self.GraphAttentionLayer(state)
