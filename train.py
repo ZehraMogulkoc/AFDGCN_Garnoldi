@@ -5,7 +5,7 @@ import torch.nn as nn
 from config import args
 from datetime import datetime
 import torch.nn.functional as F
-from model.AFDGCNMy import Model as Network
+from model.AFDGCN import Model as Network
 from engine import Engine
 from lib.metrics import MAE_torch
 from lib.TrainInits import init_seed
