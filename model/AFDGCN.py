@@ -466,6 +466,43 @@ def s_polynomial_zeros(n):
         coe[i]=2*coe[i]/(n+1)
     return coe
 
+def poylfitA_Jacobi(x, y, n, a, b, l=-1.0, r=1.0):
+    omega = (r - l) / 2
+    rho = -((r + l) / (r - l))
+    
+    IN = np.identity(n+1)
+    X = np.diag(x)
+    
+    # Jacobi polinomlarına özel çarpanlar
+    coef1 = (a - b) / 2 - (a + b + 2) / 2 * (l + r) / (r - l)
+    coef1 *= 2 / omega
+    coef2 = (a + b + 2) / (r - l)
+    
+    firstElement = coef2 * X + coef1 * IN
+    firstRow = np.concatenate((firstElement, -IN), axis=1)
+    secondRow = np.concatenate((IN, np.zeros((n+1, n+1), dtype=object)), axis=1)
+    Xcurly = np.concatenate((firstRow, secondRow), axis=0)
+    
+    m = x.size
+    
+    T = np.ones((m, 1), dtype=object)
+    x = x.reshape(-1,1)
+    Q = np.concatenate((x, T), axis=0)
+    
+    H = np.zeros((n+1, n), dtype=object)
+    for k in range(n):
+        q = np.matmul(Xcurly, Q[:,k])
+        for j in range(k):
+            H[j,k] = np.dot(Q[:,j].T, (q/m))
+            q = q - np.dot(H[j,k], Q[:,j])
+        H[k+1,k] = np.linalg.norm(q) / np.sqrt(m)
+        Q = np.column_stack((Q, q / H[k+1,k]))
+    
+    newQ = Q[n+1:2*(n+1),:]
+    d = np.linalg.solve(newQ.astype(np.float64), y.astype(np.float64))
+    return d, H
+
+
 def poylfitA_Cheby(x,y,n,a,b):
     omega = (b-a)/2
     rho = -((b+a)/(b-a))
@@ -514,7 +551,7 @@ def compare_fitA(f, x, Vander, Threeterm,x0, x1):
 
   else:
       if(Threeterm):
-          coefficients, H = poylfitA_Cheby(x,y,n,x0,x1)    
+          coefficients, H =poylfitA_Jacobi(x,y,n,x0,x1)    #poylfitA_Cheby
       else:
           coefficients, H = polyfitA(x, y, n)
   #K = coefficients.shape[0]
@@ -887,7 +924,7 @@ class AVWGCN(nn.Module):
         node_num = node_embedding.shape[0]
         # 自适应的学习节点间的内在隐藏关联获取邻接矩阵
         # D^(-1/2)AD^(-1/2)=softmax(ReLU(E * E^T)) - (N, N)
-        coeffs = generateCoeff(11, 'Chebyshev', 'g_high_pass', False, False, 0.00001, 2.0000, True)
+        coeffs = generateCoeff(11, 'Jacobi', 'g_high_pass', False, False, 0.00001, 2.0000, True)
         support = F.softmax(F.relu(torch.mm(node_embedding, node_embedding.transpose(0, 1))), dim=1)
         support = coeffs[0]*support
         # 这里得到的support表示标准化的拉普拉斯矩阵
