@@ -5,13 +5,13 @@ import configparser
 Mode = 'train'
 DEBUG = 'True'
 #DATASET = 'Konya'
-DATASET = 'PEMS08'
+DATASET = 'PEMS04'
 #DEVICE = 'cuda:1'
 DEVICE = 'cpu'
 MODEL = 'AFDGCN'
 #GRAPH = "./data/Konya/konya_kavşaklar.csv"
 #GRAPH = "./data/PEMS04/conn_graph.csv"
-GRAPH = "./data/PEMS04/PEMS08.csv"
+GRAPH = "./data/PEMS04/PEMS04.csv"
 K = 0.1
 # FILENAME_ID = "./data/PEMS03/PEMS03.txt"
 FILENAME_ID = None
