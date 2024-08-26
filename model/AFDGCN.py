@@ -902,19 +902,43 @@ class feature_attention(nn.Module):
         out = x * x_spatial_att
         return out.permute(0, 3, 2, 1)
 
+def JacobiConv(L, xs, adj, alphas, a=1.0, b=1.0, l=-1.0, r=1.0):
+    '''
+    Jacobi Bases. Please refer to our paper for the form of the bases.
+    '''
+    if L == 0: return xs[0]
+    if L == 1:
+        coef1 = (a - b) / 2 - (a + b + 2) / 2 * (l + r) / (r - l)
+        coef1 *= alphas[0]
+        coef2 = (a + b + 2) / (r - l)
+        coef2 *= alphas[0]
+        return coef1 * xs[-1] + coef2 * (adj @ xs[-1])
+    coef_l = 2 * L * (L + a + b) * (2 * L - 2 + a + b)
+    coef_lm1_1 = (2 * L + a + b - 1) * (2 * L + a + b) * (2 * L + a + b - 2)
+    coef_lm1_2 = (2 * L + a + b - 1) * (a*2 - b*2)
+    coef_lm2 = 2 * (L - 1 + a) * (L - 1 + b) * (2 * L + a + b)
+    tmp1 = alphas[L - 1] * (coef_lm1_1 / coef_l)
+    tmp2 = alphas[L - 1] * (coef_lm1_2 / coef_l)
+    tmp3 = alphas[L - 1] * alphas[L - 2] * (coef_lm2 / coef_l)
+    tmp1_2 = tmp1 * (2 / (r - l))
+    tmp2_2 = tmp1 * ((r + l) / (r - l)) + tmp2
+    nx = tmp1_2 * (adj @ xs[-1]) - tmp2_2 * xs[-1]
+    nx -= tmp3 * xs[-2]
+    return nx
+  
 class AVWGCN(nn.Module):
-    def __init__(self, in_dim, out_dim, cheb_k, embed_dim):
+    def _init_(self, in_dim, out_dim, cheb_k, embed_dim):
         """
         :param in_dim: 输入维度
         :param out_dim: 输出维度
         :param cheb_k: 切比雪夫多项式的阶，默认为3
         :param embed_dim: 节点的嵌入维度
         """
-        super(AVWGCN, self).__init__()
+        super(AVWGCN, self)._init_()
         self.cheb_k = cheb_k
         self.weights_pool = nn.Parameter(torch.FloatTensor(embed_dim, cheb_k, in_dim, out_dim))
         self.bias_pool = nn.Parameter(torch.FloatTensor(embed_dim, out_dim))
-
+  
     def forward(self, x, node_embedding):
         """
         :param x: (B, N, C_in)
@@ -924,14 +948,14 @@ class AVWGCN(nn.Module):
         node_num = node_embedding.shape[0]
         # 自适应的学习节点间的内在隐藏关联获取邻接矩阵
         # D^(-1/2)AD^(-1/2)=softmax(ReLU(E * E^T)) - (N, N)
-        coeffs = generateCoeff(11, 'Jacobi', 'g_high_pass', False, False, 0.00001, 2.0000, True)
+        coeffs = generateCoeff(11, 'Jacobi', 'g_0', False, False, -0.9, 0.9,True)
         support = F.softmax(F.relu(torch.mm(node_embedding, node_embedding.transpose(0, 1))), dim=1)
         support = coeffs[0]*support
         # 这里得到的support表示标准化的拉普拉斯矩阵
         support_set = [torch.eye(node_num).to(support.device), support]
         for k in range(2, self.cheb_k):
             # Z(k) = 2 * L * Z(k-1) - Z(k-2)
-            support_set.append(torch.matmul(2 * coeffs[k]*support, support_set[-1]) - support_set[-2])
+            support_set.append(JacobiConv(k, support_set[-2:], support, coeffs[:k+1], a=1.0, b=1.0, l=-1.0, r=1.0))
         supports = torch.stack(support_set, dim=0) # (K, N, N)
         # (N, D) * (D, K, C_in, C_out) -> (N, K, C_in, C_out)
         weights = torch.einsum('nd, dkio->nkio', node_embedding, self.weights_pool)
