@@ -927,7 +927,7 @@ def JacobiConv(L, xs, adj, alphas, a=1.0, b=1.0, l=-1.0, r=1.0):
     return nx
   
 class AVWGCN(nn.Module):
-    def _init_(self, in_dim, out_dim, cheb_k, embed_dim):
+    def __init__(self, in_dim, out_dim, cheb_k, embed_dim):
         """
         :param in_dim: 输入维度
         :param out_dim: 输出维度
