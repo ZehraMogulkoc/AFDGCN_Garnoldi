@@ -934,7 +934,7 @@ class AVWGCN(nn.Module):
         :param cheb_k: 切比雪夫多项式的阶，默认为3
         :param embed_dim: 节点的嵌入维度
         """
-        super(AVWGCN, self)._init_()
+        super(AVWGCN, self).__init__()
         self.cheb_k = cheb_k
         self.weights_pool = nn.Parameter(torch.FloatTensor(embed_dim, cheb_k, in_dim, out_dim))
         self.bias_pool = nn.Parameter(torch.FloatTensor(embed_dim, out_dim))
