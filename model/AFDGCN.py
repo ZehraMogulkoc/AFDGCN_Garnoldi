@@ -925,6 +925,16 @@ def JacobiConv(L, xs, adj, alphas, a=1.0, b=1.0, l=-1.0, r=1.0):
     nx = tmp1_2 * (adj @ xs[-1]) - tmp2_2 * xs[-1]
     nx -= tmp3 * xs[-2]
     return nx
+
+def ChebyshevConv(L, xs, adj, alphas):
+    '''
+    Chebyshev Bases. Please refer to our paper for the form of the bases.
+    '''
+    if L == 0: return xs[0]
+    nx = (2 * alphas[L - 1]) * (adj @ xs[-1])
+    if L > 1:
+        nx -= (alphas[L - 1] * alphas[L - 2]) * xs[-2]
+    return nx
   
 class AVWGCN(nn.Module):
     def __init__(self, in_dim, out_dim, cheb_k, embed_dim):
@@ -948,14 +958,15 @@ class AVWGCN(nn.Module):
         node_num = node_embedding.shape[0]
         # 自适应的学习节点间的内在隐藏关联获取邻接矩阵
         # D^(-1/2)AD^(-1/2)=softmax(ReLU(E * E^T)) - (N, N)
-        coeffs = generateCoeff(11, 'Jacobi', 'g_0', False, False, -0.9, 0.9,True)
+        coeffs = generateCoeff(11, 'Chebyshev', 'g_0', False, False, -0.9, 0.9,True)
         support = F.softmax(F.relu(torch.mm(node_embedding, node_embedding.transpose(0, 1))), dim=1)
         support = coeffs[0]*support
         # 这里得到的support表示标准化的拉普拉斯矩阵
         support_set = [torch.eye(node_num).to(support.device), support]
         for k in range(2, self.cheb_k):
             # Z(k) = 2 * L * Z(k-1) - Z(k-2)
-            support_set.append(JacobiConv(k, support_set[-2:], support, coeffs[:k+1], a=1.0, b=1.0, l=-1.0, r=1.0))
+            #support_set.append(JacobiConv(k, support_set[-2:], support, coeffs[:k+1], a=1.0, b=1.0, l=-1.0, r=1.0))
+            ChebyshevConv.append(JacobiConv(k, support_set[-2:], support, coeffs[:k+1]))
         supports = torch.stack(support_set, dim=0) # (K, N, N)
         # (N, D) * (D, K, C_in, C_out) -> (N, K, C_in, C_out)
         weights = torch.einsum('nd, dkio->nkio', node_embedding, self.weights_pool)
