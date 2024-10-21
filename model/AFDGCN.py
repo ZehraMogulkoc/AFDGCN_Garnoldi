@@ -965,8 +965,8 @@ class AVWGCN(nn.Module):
         support_set = [torch.eye(node_num).to(support.device), support]
         for k in range(2, self.cheb_k):
             # Z(k) = 2 * L * Z(k-1) - Z(k-2)
-            #support_set.append(JacobiConv(k, support_set[-2:], support, coeffs[:k+1], a=1.0, b=1.0, l=-1.0, r=1.0))
-            ChebyshevConv.append(JacobiConv(k, support_set[-2:], support, coeffs[:k+1]))
+            support_set.append(torch.matmul(2 * support, support_set[-1]) - support_set[-2])
+            #ChebyshevConv.append(JacobiConv(k, support_set[-2:], support, coeffs[:k+1]))
         supports = torch.stack(support_set, dim=0) # (K, N, N)
         # (N, D) * (D, K, C_in, C_out) -> (N, K, C_in, C_out)
         weights = torch.einsum('nd, dkio->nkio', node_embedding, self.weights_pool)
