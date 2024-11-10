@@ -235,20 +235,23 @@ class Engine(object):
         y_pred = []
         y_true = []
         results = {'Output': []}
+        real_flow = {'Target': []}
         with torch.no_grad():
             for batch_idx, (data, target) in enumerate(data_loader):
                 data = data[..., :1].to(args.device)
                 label = target[..., :1].to(args.device)
                 output = model(data)
                 #results['Input'].extend(data.cpu().numpy())
-                #results['Target'].extend(label.cpu().numpy())
+                real_flow['Target'].extend(label.cpu().numpy())
                 results['Output'].extend(output.cpu().numpy())
                 y_true.append(label)
                 y_pred.append(output)
+        df_real= pd.DataFrame(real_flow)
         df_results = pd.DataFrame(results)
 
         # Save the DataFrame to a CSV file
         df_results.to_csv('test_results.csv', index=False)
+        df_real.to_csv('real_flow.csv', index=False)
         y_true = scaler.inverse_transform(torch.cat(y_true, dim=0)).to(args.device)
         if args.real_value:
             y_pred = torch.cat(y_pred, dim=0).to(args.device).to(args.device)
@@ -257,7 +260,7 @@ class Engine(object):
         print(y_true.cpu().numpy().shape)
         # np.save('./NewNet_{}_true.npy'.format(args.dataset), y_true.cpu().numpy())
         # np.save('./NewNet_{}_pred.npy'.format(args.dataset), y_pred.cpu().numpy())
-
+        print(y_true.shape)
         for t in range(y_true.shape[1]):
             mae, rmse, mape = All_Metrics(y_pred[:, t, ...], y_true[:, t, ...], args.mae_thresh, args.rmse_thresh, args.mape_thresh)
             #print(y_pred.cpu().numpy().shape)
