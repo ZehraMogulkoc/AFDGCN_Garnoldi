@@ -84,7 +84,7 @@ def get_Gaussian_matrix(distance_df_filename, num_of_vertices, normalized_k=0.1,
 
 
 if __name__ == '__main__':
-    adj = get_adjacency_matrix("../data/PEMS08/PEMS08.csv", 170, type='distance', id_filename=None)
+    adj = get_adjacency_matrix("../data/Konya/konya_kavşaklar.csv", 8, type='distance', id_filename=None)
     print(adj.shape)
     adj = get_Gaussian_matrix("../data/PEMS03/PEMS03.csv", 358, normalized_k=0.1, id_filename="../data/PEMS03/PEMS03.txt")
     print(adj.shape)
