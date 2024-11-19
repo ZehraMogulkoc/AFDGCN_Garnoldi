@@ -15,27 +15,28 @@ from torch.autograd import Variable
 from typing import Optional, Tuple
 import math
 import torch.nn.functional as F
-from torch import Tensor
+#from torch import Tensor
 #from torch_sparse import SparseTensor, matmul
-from scipy.special import legendre
+#from scipy.special import legendre
 
-from torch_geometric.nn.conv import MessagePassing
-from torch_geometric.nn.conv.gcn_conv import gcn_norm
-from torch_geometric.typing import Adj, OptTensor
+#from torch_geometric.nn.conv import MessagePassing
+#from torch_geometric.nn.conv.gcn_conv import gcn_norm
+#from torch_geometric.typing import Adj, OptTensor
 from torch.nn import Parameter
 
 import numpy as np
 #import scipy.sparse as sp
 import torch
 import torch.nn as nn
-from scipy.linalg import expm
-import scipy.io as sio
+# from scipy.linalg import expm
+# import scipy.io as sio
 
-from scipy.linalg import eig, eigh
-from scipy.sparse.linalg import eigs, eigsh
+# from scipy.linalg import eig, eigh
+# from scipy.sparse.linalg import eigs, eigsh
 
 
-from scipy.special import gamma, factorial
+# from scipy.special import gamma, factorial
+
 
 #! /usr/bin/env python
 #
