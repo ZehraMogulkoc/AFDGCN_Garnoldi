@@ -4,13 +4,14 @@ import configparser
 # *****************************************  参数初始化配置 ****************************************** #
 Mode = 'train'
 DEBUG = 'True'
-DATASET = 'Konya'
+#DATASET = 'Kcetas'
 #DATASET = 'PEMS04'
+DATASET = 'Konya'
 #DEVICE = 'cuda:1'
 DEVICE = 'cpu'
 MODEL = 'AFDGCN'
 GRAPH = "./data/Konya/konya_kavşaklar.csv"
-#GRAPH = "./data/PEMS04/conn_graph.csv"
+#GRAPH = "./data/Kcetas/conn_graph.csv"
 #GRAPH = "./data/PEMS04/PEMS04.csv"
 K = 0.1
 # FILENAME_ID = "./data/PEMS03/PEMS03.txt"
@@ -56,18 +57,6 @@ args.add_argument('--grad_norm', default=config['train']['grad_norm'], type=eval
 args.add_argument('--max_grad_norm', default=config['train']['max_grad_norm'], type=int)
 args.add_argument('--teacher_forcing', default=False, type=bool)
 args.add_argument('--real_value', default=config['train']['real_value'], type=eval)
-args.add_argument('--Init', type=str,
-                        choices=['SGC', 'PPR', 'NPPR', 'Random', 'WS', 'Monimal','Null'],
-                        default='PPR')
-args.add_argument('--ArnoldiInit', type=str,
-                        choices=['Monimal', 'Chebyshev', 'Legendre', 'Jacobi'],
-                        default='Legendre')
-args.add_argument('--FuncName', type=str,
-                        choices=['g_0', 'g_1', 'g_2', 'g_3','g_band_rejection'],
-                        default='g_1')
-args.add_argument('--homophily', type=bool, default=False, help='Cora, Citeseer, Pubmed are homophily')
-args.add_argument('--Vandermonde', type=bool, default=False, help='Should we obtain coeffs with Vandermonde or Arnoldi?')
-
 # 6. test
 args.add_argument('--mae_thresh', default=config['test']['mae_thresh'], type=eval)
 args.add_argument('--rmse_thresh', default=config['test']['rmse_thresh'], type=eval)
