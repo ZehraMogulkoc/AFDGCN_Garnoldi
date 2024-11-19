@@ -16,10 +16,10 @@ def load_st_dataset(dataset):
         data_path = os.path.join('./data/PEMS07/PEMS07.npz')
         data = np.load(data_path)['data'][:, :, :1]  # only the first dimension, traffic flow data
     elif dataset == 'Kcetas':
-        data_path = os.path.join('./data/PEMS04/morning_only.npz')
+        data_path = os.path.join('./data/Kcetas/morning_only.npz')
         data = np.load(data_path)['data'][:, :, :1] 
     elif dataset == 'Konya':
-        data_path = os.path.join('./data/Konya/konya_kavşak_1.npz')
+        data_path = os.path.join('./data/Konya/konya_kavşak.npz')
         data = np.load(data_path)['data'][:, :, :1]  # only the first dimension, traffic flow data
     else:
         raise ValueError
