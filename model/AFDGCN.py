@@ -15,28 +15,27 @@ from torch.autograd import Variable
 from typing import Optional, Tuple
 import math
 import torch.nn.functional as F
-#from torch import Tensor
-#from torch_sparse import SparseTensor, matmul
-#from scipy.special import legendre
+from torch import Tensor
+from torch_sparse import SparseTensor, matmul
+from scipy.special import legendre
 
-#from torch_geometric.nn.conv import MessagePassing
-#from torch_geometric.nn.conv.gcn_conv import gcn_norm
-#from torch_geometric.typing import Adj, OptTensor
+from torch_geometric.nn.conv import MessagePassing
+from torch_geometric.nn.conv.gcn_conv import gcn_norm
+from torch_geometric.typing import Adj, OptTensor
 from torch.nn import Parameter
 
 import numpy as np
-#import scipy.sparse as sp
+import scipy.sparse as sp
 import torch
 import torch.nn as nn
-# from scipy.linalg import expm
-# import scipy.io as sio
+from scipy.linalg import expm
+import scipy.io as sio
 
-# from scipy.linalg import eig, eigh
-# from scipy.sparse.linalg import eigs, eigsh
+from scipy.linalg import eig, eigh
+from scipy.sparse.linalg import eigs, eigsh
 
 
-# from scipy.special import gamma, factorial
-
+from scipy.special import gamma, factorial
 
 #! /usr/bin/env python
 #
@@ -588,6 +587,158 @@ def Vandermonde(x, y):
   coeffs = np.linalg.solve(V, y) # f_nodes must be a column vector
   return coeffs
 
+class ARNOLDI(MessagePassing):
+    r"""The approximate personalized propagation of neural predictions layer
+    from the `"Predict then Propagate: Graph Neural Networks meet Personalized
+    PageRank" <https://arxiv.org/abs/1810.05997>`_ paper
+
+    .. math::
+        \mathbf{X}^{(0)} &= \mathbf{X}
+
+        \mathbf{X}^{(k)} &= (1 - \alpha) \mathbf{\hat{D}}^{-1/2}
+        \mathbf{\hat{A}} \mathbf{\hat{D}}^{-1/2} \mathbf{X}^{(k-1)} + \alpha
+        \mathbf{X}^{(0)}
+
+        \mathbf{X}^{\prime} &= \mathbf{X}^{(K)},
+
+    where :math:`\mathbf{\hat{A}} = \mathbf{A} + \mathbf{I}` denotes the
+    adjacency matrix with inserted self-loops and
+    :math:`\hat{D}_{ii} = \sum_{j=0} \hat{A}_{ij}` its diagonal degree matrix.
+    The adjacency matrix can include other values than :obj:`1` representing
+    edge weights via the optional :obj:`edge_weight` tensor.
+
+    Args:
+        K (int): Number of iterations :math:`K`.
+        alpha (float): Teleport probability :math:`\alpha`.
+        dropout (float, optional): Dropout probability of edges during
+            training. (default: :obj:`0`)
+        cached (bool, optional): If set to :obj:`True`, the layer will cache
+            the computation of :math:`\mathbf{\hat{D}}^{-1/2} \mathbf{\hat{A}}
+            \mathbf{\hat{D}}^{-1/2}` on first execution, and will use the
+            cached version for further executions.
+            This parameter should only be set to :obj:`True` in transductive
+            learning scenarios. (default: :obj:`False`)
+        add_self_loops (bool, optional): If set to :obj:`False`, will not add
+            self-loops to the input graph. (default: :obj:`True`)
+        normalize (bool, optional): Whether to add self-loops and apply
+            symmetric normalization. (default: :obj:`True`)
+        **kwargs (optional): Additional arguments of
+            :class:`torch_geometric.nn.conv.MessagePassing`.
+
+    Shapes:
+        - **input:**
+          node features :math:`(|\mathcal{V}|, F)`,
+          edge indices :math:`(2, |\mathcal{E}|)`,
+          edge weights :math:`(|\mathcal{E}|)` *(optional)*
+        - **output:** node features :math:`(|\mathcal{V}|, F)`
+    """
+    _cached_edge_index: Optional[Tuple[Tensor, Tensor]]
+    _cached_adj_t: Optional[SparseTensor]
+
+    def __init__(self, K: int, alpha: float, lower: float, upper: float,  homophily: bool, nameFunc: str, namePoly: str, Vandermonde: str, dropout: float = 0.,
+                 cached: bool = False, add_self_loops: bool = True,
+                 normalize: bool = True, **kwargs):
+        kwargs.setdefault('aggr', 'add')
+        super().__init__(**kwargs)
+        self.K = K
+        self.alpha = alpha
+        self.homophily = homophily
+        self.Vandermonde = Vandermonde
+        self.lower = lower
+        self.upper = upper
+        self.dropout = dropout
+        self.cached = cached
+        self.add_self_loops = add_self_loops
+        self.normalize = normalize
+        if(nameFunc == 'g_0'):
+            self.coeffs = compare_fit_panelA(g_0, namePoly, Vandermonde, self.K, self.lower, self.upper)
+        elif(nameFunc == 'g_1'):
+            self.coeffs = compare_fit_panelA(g_1, namePoly, Vandermonde, self.K, self.lower, self.upper) 
+        elif(nameFunc == 'g_2'):
+            self.coeffs = compare_fit_panelA(g_2,namePoly, Vandermonde, self.K,self.lower, self.upper)
+        elif(nameFunc == 'g_3'):
+            self.coeffs = compare_fit_panelA(g_3,namePoly, Vandermonde, self.K, self.lower, self.upper)
+        elif(nameFunc == 'g_4'):
+            self.coeffs = compare_fit_panelA(g_4,namePoly, Vandermonde, self.K,self.lower, self.upper)
+        elif(nameFunc == 'g_band_rejection'):
+            self.coeffs = compare_fit_panelA(g_band_rejection,namePoly, Vandermonde, self.K,self.lower, self.upper)
+        elif(nameFunc == 'g_band_pass'):
+            self.coeffs = compare_fit_panelA(g_band_pass,namePoly, Vandermonde, self.K,self.lower, self.upper)
+        elif(nameFunc == 'g_low_pass'):
+            self.coeffs = compare_fit_panelA(g_low_pass,namePoly, Vandermonde, self.K,self.lower, self.upper)
+        elif(nameFunc == 'g_high_pass'):
+            self.coeffs = compare_fit_panelA(g_high_pass,namePoly, Vandermonde, self.K,self.lower, self.upper)
+        elif(nameFunc == 'g_comb'):
+            self.coeffs = compare_fit_panelA(g_comb,namePoly, Vandermonde, self.K,self.lower, self.upper)
+        else:
+            self.coeffs = compare_fit_panelA(g_fullRWR,namePoly, Vandermonde,self.K,self.lower, self.upper)
+        self._cached_edge_index = None
+        self._cached_adj_t = None
+
+    def reset_parameters(self):
+        self._cached_edge_index = None
+        self._cached_adj_t = None
+
+    def forward(self, x: Tensor, edge_index: Adj,
+                edge_weight: OptTensor = None) -> Tensor:
+        """"""
+        if self.normalize:
+            if isinstance(edge_index, Tensor):
+                cache = self._cached_edge_index
+                if cache is None:
+                    edge_index, edge_weight = gcn_norm(  # yapf: disable
+                        edge_index, edge_weight, x.size(self.node_dim), False,
+                        self.add_self_loops, self.flow, dtype=x.dtype)
+                    if self.cached:
+                        self._cached_edge_index = (edge_index, edge_weight)
+                else:
+                    edge_index, edge_weight = cache[0], cache[1]
+
+            elif isinstance(edge_index, SparseTensor):
+                cache = self._cached_adj_t
+                if cache is None:
+                    edge_index = gcn_norm(  # yapf: disable
+                        edge_index, edge_weight, x.size(self.node_dim), False,
+                        self.add_self_loops, self.flow, dtype=x.dtype)
+                    if self.cached:
+                        self._cached_adj_t = edge_index
+                else:
+                    edge_index = cache
+
+        h = x
+        # Here this code could be more efficient 
+        myb = self.coeffs[self.K-1]*x
+        for k in range(self.K-2,-1,-1):
+            if self.dropout > 0 and self.training:
+                if isinstance(edge_index, Tensor):
+                    assert edge_weight is not None
+                    edge_weight = F.dropout(edge_weight, p=self.dropout)
+                else:
+                    value = edge_index.storage.value()
+                    assert value is not None
+                    value = F.dropout(value, p=self.dropout)
+                    edge_index = edge_index.set_value(value, layout='coo')
+
+            # propagate_type: (x: Tensor, edge_weight: OptTensor)
+            x = self.propagate(edge_index, x=x, edge_weight=edge_weight,
+                               size=None)
+            #x = x * (1 - self.alpha)
+            if (self.homophily):
+                x = x + self.coeffs[k]*myb
+            else:
+                x = self.coeffs[k]*x + myb
+
+        return x
+
+    def message(self, x_j: Tensor, edge_weight: OptTensor) -> Tensor:
+        return x_j if edge_weight is None else edge_weight.view(-1, 1) * x_j
+
+    def message_and_aggregate(self, adj_t: SparseTensor, x: Tensor) -> Tensor:
+        return matmul(adj_t, x, reduce=self.aggr)
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}(K={self.K}, alpha={self.alpha})'
+
 
 
 
@@ -751,40 +902,6 @@ class feature_attention(nn.Module):
         out = x * x_spatial_att
         return out.permute(0, 3, 2, 1)
 
-def JacobiConv(L, xs, adj, alphas, a=1.0, b=1.0, l=-1.0, r=1.0):
-    '''
-    Jacobi Bases. Please refer to our paper for the form of the bases.
-    '''
-    if L == 0: return xs[0]
-    if L == 1:
-        coef1 = (a - b) / 2 - (a + b + 2) / 2 * (l + r) / (r - l)
-        coef1 *= alphas[0]
-        coef2 = (a + b + 2) / (r - l)
-        coef2 *= alphas[0]
-        return coef1 * xs[-1] + coef2 * (adj @ xs[-1])
-    coef_l = 2 * L * (L + a + b) * (2 * L - 2 + a + b)
-    coef_lm1_1 = (2 * L + a + b - 1) * (2 * L + a + b) * (2 * L + a + b - 2)
-    coef_lm1_2 = (2 * L + a + b - 1) * (a*2 - b*2)
-    coef_lm2 = 2 * (L - 1 + a) * (L - 1 + b) * (2 * L + a + b)
-    tmp1 = alphas[L - 1] * (coef_lm1_1 / coef_l)
-    tmp2 = alphas[L - 1] * (coef_lm1_2 / coef_l)
-    tmp3 = alphas[L - 1] * alphas[L - 2] * (coef_lm2 / coef_l)
-    tmp1_2 = tmp1 * (2 / (r - l))
-    tmp2_2 = tmp1 * ((r + l) / (r - l)) + tmp2
-    nx = tmp1_2 * (adj @ xs[-1]) - tmp2_2 * xs[-1]
-    nx -= tmp3 * xs[-2]
-    return nx
-
-def ChebyshevConv(L, xs, adj, alphas):
-    '''
-    Chebyshev Bases. Please refer to our paper for the form of the bases.
-    '''
-    if L == 0: return xs[0]
-    nx = (2 * alphas[L - 1]) * (adj @ xs[-1])
-    if L > 1:
-        nx -= (alphas[L - 1] * alphas[L - 2]) * xs[-2]
-    return nx
-  
 class AVWGCN(nn.Module):
     def __init__(self, in_dim, out_dim, cheb_k, embed_dim):
         """
@@ -797,7 +914,7 @@ class AVWGCN(nn.Module):
         self.cheb_k = cheb_k
         self.weights_pool = nn.Parameter(torch.FloatTensor(embed_dim, cheb_k, in_dim, out_dim))
         self.bias_pool = nn.Parameter(torch.FloatTensor(embed_dim, out_dim))
-  
+
     def forward(self, x, node_embedding):
         """
         :param x: (B, N, C_in)
@@ -807,15 +924,14 @@ class AVWGCN(nn.Module):
         node_num = node_embedding.shape[0]
         # 自适应的学习节点间的内在隐藏关联获取邻接矩阵
         # D^(-1/2)AD^(-1/2)=softmax(ReLU(E * E^T)) - (N, N)
-        coeffs = generateCoeff(11, 'Chebyshev', 'g_0', False, False, -0.9, 0.9,True)
+        coeffs = generateCoeff(11, 'Jacobi', 'g_high_pass', False, False, 0.00001, 2.0000, True)
         support = F.softmax(F.relu(torch.mm(node_embedding, node_embedding.transpose(0, 1))), dim=1)
         support = coeffs[0]*support
         # 这里得到的support表示标准化的拉普拉斯矩阵
         support_set = [torch.eye(node_num).to(support.device), support]
         for k in range(2, self.cheb_k):
             # Z(k) = 2 * L * Z(k-1) - Z(k-2)
-            #support_set.append(torch.matmul(2 * support, support_set[-1]) - support_set[-2])
-            support_set.append(ChebyshevConv(k, support_set[-2:], support, coeffs[:k+1]))
+            support_set.append(torch.matmul(2 * coeffs[k]*support, support_set[-1]) - support_set[-2])
         supports = torch.stack(support_set, dim=0) # (K, N, N)
         # (N, D) * (D, K, C_in, C_out) -> (N, K, C_in, C_out)
         weights = torch.einsum('nd, dkio->nkio', node_embedding, self.weights_pool)
@@ -894,7 +1010,7 @@ class AVWDCRNN(nn.Module):
         return torch.stack(init_states, dim=0)  # (num_layers, B, N, hidden_dim)
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, out_dim, max_len=1):##neden 12 cevabı
+    def __init__(self, out_dim, max_len=1):
         super(PositionalEncoding, self).__init__()
 
         # compute the positional encodings once in log space.
