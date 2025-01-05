@@ -4,15 +4,15 @@ import configparser
 # *****************************************  参数初始化配置 ****************************************** #
 Mode = 'train'
 DEBUG = 'True'
-DATASET = 'Kcetas'
-#DATASET = 'PEMS04'
+#DATASET = 'Kcetas'
+ATASET = 'PEMS04'
 #DATASET = 'Konya'
 #DEVICE = 'cuda:1'
 DEVICE = 'cpu'
 MODEL = 'AFDGCN'
 #GRAPH = "/content/AFDGCN_Garnoldi/data/Konya/konya_kavşaklar.csv"
-GRAPH = "/content/AFDGCN_Garnoldi/data/Kcetas/conn_graph.csv"
-#GRAPH = "./data/PEMS04/PEMS04.csv"
+#GRAPH = "/content/AFDGCN_Garnoldi/data/Kcetas/conn_graph.csv"
+GRAPH = "./data/PEMS04/PEMS04.csv"
 K = 0.1
 # FILENAME_ID = "./data/PEMS03/PEMS03.txt"
 FILENAME_ID = None
