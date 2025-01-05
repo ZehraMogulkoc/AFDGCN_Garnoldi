@@ -5,7 +5,7 @@ import configparser
 Mode = 'train'
 DEBUG = 'True'
 #DATASET = 'Kcetas'
-ATASET = 'PEMS04'
+DATASET = 'PEMS04'
 #DATASET = 'Konya'
 #DEVICE = 'cuda:1'
 DEVICE = 'cpu'
