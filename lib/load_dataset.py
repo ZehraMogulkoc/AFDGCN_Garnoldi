@@ -21,6 +21,9 @@ def load_st_dataset(dataset):
     elif dataset == 'Konya':
         data_path = os.path.join('/content/AFDGCN_Garnoldi/data/Konya/konya_kavşak.npz')
         data = np.load(data_path)['data'][:, :, :1]  # only the first dimension, traffic flow data
+    elif dataset == 'Konya_Ocak_Nisan':
+        data_path = os.path.join('/content/AFDGCN_Garnoldi/data/Konya/konya_kavşak_ocak_nisan.npz')
+        data = np.load(data_path)['data'][:, :, :1]
     else:
         raise ValueError
     print('Load %s Dataset shaped: ' % dataset, data.shape)
