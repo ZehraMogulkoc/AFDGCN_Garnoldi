@@ -1010,7 +1010,7 @@ class AVWDCRNN(nn.Module):
         return torch.stack(init_states, dim=0)  # (num_layers, B, N, hidden_dim)
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, out_dim, max_len=1):
+    def __init__(self, out_dim, max_len=12):
         super(PositionalEncoding, self).__init__()
 
         # compute the positional encodings once in log space.
