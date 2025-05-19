@@ -170,10 +170,10 @@ hidden_dim = 64
 output_dim = 1
 embed_dim =307#19#8   if you used adj, number of nodes should be entered here
 cheb_k = 2
-horizon = 1
+horizon = 12
 num_layers = 1 
 heads = 4
-timesteps = 1
+timesteps = 12
 kernel_size = 5
 model = Network(num_node = args.num_nodes, 
                 input_dim = input_dim, 
