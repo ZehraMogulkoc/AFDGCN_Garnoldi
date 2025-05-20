@@ -20,7 +20,8 @@ if torch.cuda.is_available():
     torch.cuda.set_device(int(args.device[0]))
 else:
 '''
-args.device = 'cpu'
+#args.device = 'cpu'
+args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 #A = get_Gaussian_matrix(args.graph_path, args.num_nodes, args.normalized_k, id_filename=args.filename_id)
 
@@ -156,7 +157,7 @@ Adj = get_adjacency_matrix(args.graph_path, args.num_nodes, type='connectivity',
 #A = F.softmax(F.relu(torch.mm(adj_tensor, adj_tensor.t())), dim=1)
 #A=F.softmax(F.relu(adj_tensor.t()), dim=1)
 Adj=normalize_adj(Adj)
-A=torch.tensor(Adj, dtype=torch.float32)
+A=torch.tensor(Adj, dtype=torch.float32).to(args.device)
 train_loader, val_loader, test_loader, scaler = get_dataloader(args,
                                                                normalizer=args.normalizer,
                                                                tod=args.tod, 
